@@ -3,6 +3,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
+
+#include "util.h"
 
 typedef uint64_t capabilities;
 
@@ -122,6 +125,7 @@ struct decoded_instr {
 };
 
 struct rl_data {
+	capabilities caps;
 	uint16_t regs[7]; /* plus the ZERO register */
 	uint8_t last_port : 3;
 };
@@ -131,6 +135,63 @@ static struct decoded_instr decode(uint16_t raw_instr);
 static void rl_reset(struct node *n);
 static void rl_exec(struct node *n);
 static void rl_destroy(struct node *n);
+static uint16_t get_reg(struct node *n, enum rl_reg r);
+static void set_reg(struct node *n, enum rl_reg r, uint16_t value);
+static void advance_pc(struct node *n);
+static void raise_Z(struct node *n, uint16_t cmp_value);
+static void raise_N(struct node *n, uint16_t cmp_value);
+static void raise_C(struct node *n, int flag);
+static void raise_V(struct node *n, int flag);
+static void MOV(struct node *n, struct decoded_instr di);
+static void ADD(struct node *n, struct decoded_instr di);
+static void SUB(struct node *n, struct decoded_instr di);
+
+static void (*instruction_lut[])(struct node *n, struct decoded_instr di) = {
+#define INSTR(NAME) [CONCAT2(RL_,NAME)] = NAME
+	INSTR(MOV),
+	INSTR(ADD),
+	INSTR(SUB),
+#undef INSTR
+};
+
+struct node
+create_rl_computer(unsigned int points)
+{
+	struct node n;
+	struct computer_data *cd;
+	struct rl_data *rld;
+
+	n = create_computer();
+	cd = n.data;
+
+	cd->data = malloc(sizeof(struct rl_data));
+	if(! cd->data) {
+		fprintf(stderr, "couldn't malloc rl_data\n");
+		exit(1);
+	}
+	rld = cd->data;
+
+	rld->caps = generate_caps(points);
+
+	if(rld->caps & CAP_512MEM) {
+		cd->mem_sz = 512;
+	} else {
+		cd->mem_sz = 256;
+	}
+	cd->memory = malloc(cd->mem_sz);
+	if(! cd->memory) {
+		fprintf(stderr, "couldn't malloc rl memory (%zu)\n", cd->mem_sz);
+		exit(1);
+	}
+
+	rl_reset(&n);
+
+	cd->reset = rl_reset;
+	cd->exec = rl_exec;
+	cd->destroy = rl_destroy;
+
+	return n;
+}
 
 static capabilities
 generate_caps(unsigned int spare_points)
@@ -371,5 +432,208 @@ rl_reset(struct node *n)
 
 	memset(&rld->regs, 0, sizeof(rld->regs));
 	rld->last_port = RL_PORT_UP;
+}
+
+static void
+rl_exec(struct node *n)
+{
+	uint16_t raw_instr;
+	struct decoded_instr di;
+	struct computer_data *cd;
+	struct rl_data *rld;
+
+	cd = n->data;
+	rld = cd->data;
+
+	raw_instr = computer_load_word(cd, cd->pc);
+	di = decode(raw_instr);
+
+	if(di.op != RL_ILLEGAL_INSTR && rld->caps & (1 << di.op)) {
+		if(instruction_lut[di.op]) {
+			instruction_lut[di.op](n, di);
+		} else {
+			/* probably an unimplemented instr, or something went very wrong */
+			fprintf(stderr, "unimplemented %d\n", (int)di.op);
+		}
+	} else {
+		/* illegal instr */
+		cd->pc += 2;
+	}
+}
+
+static void
+rl_destroy(struct node *n)
+{
+	struct computer_data *cd;
+
+	cd = n->data;
+
+	free(cd->memory);
+	free(cd->data);
+}
+
+static uint16_t
+get_reg(struct node *n, enum rl_reg r)
+{
+	struct computer_data *cd;
+	struct rl_data *rld;
+
+	cd = n->data;
+	rld = cd->data;
+
+	switch(r) {
+	case RL_REG_ZERO:
+		return 0;
+	case RL_REG_R4:
+		if(rld->caps & CAP_R4) return rld->regs[RL_REG_R4];
+		return 0;
+	case RL_REG_R5:
+		if(rld->caps & CAP_R5) return rld->regs[RL_REG_R5];
+		return 0;
+	default:
+		return rld->regs[r];
+	}
+}
+
+static void
+set_reg(struct node *n, enum rl_reg r, uint16_t value)
+{
+	struct computer_data *cd;
+	struct rl_data *rld;
+
+	cd = n->data;
+	rld = cd->data;
+
+	switch(r) {
+	case RL_REG_ZERO:
+	case RL_REG_STATUS:
+		return;
+	case RL_REG_R4:
+		if(! (rld->caps & CAP_R4)) return;
+		break;
+	case RL_REG_R5:
+		if(! (rld->caps & CAP_R5)) return;
+		break;
+	default:
+		break; /* anti compiler warning */
+	}
+
+	rld->regs[r] = value;
+}
+
+static void
+advance_pc(struct node *n)
+{
+	struct computer_data *cd;
+
+	cd = n->data;
+
+	cd->pc += 2;
+	cd->pc %= cd->mem_sz;
+}
+
+static void
+raise_Z(struct node *n, uint16_t cmp_value)
+{
+	struct computer_data *cd;
+	struct rl_data *rld;
+
+	cd = n->data;
+	rld = cd->data;
+
+	rld->regs[RL_REG_STATUS] &= ~RL_STATUS_Z;
+	if(cmp_value == 0) {
+		rld->regs[RL_REG_STATUS] |= RL_STATUS_Z;
+	}
+}
+
+static void
+raise_N(struct node *n, uint16_t cmp_value)
+{
+	struct computer_data *cd;
+	struct rl_data *rld;
+
+	cd = n->data;
+	rld = cd->data;
+
+	rld->regs[RL_REG_STATUS] &= ~RL_STATUS_N;
+	if(cmp_value & 0x8000) {
+		rld->regs[RL_REG_STATUS] |= RL_STATUS_N;
+	}
+}
+
+static void
+raise_C(struct node *n, int flag)
+{
+	struct computer_data *cd;
+	struct rl_data *rld;
+
+	cd = n->data;
+	rld = cd->data;
+
+	rld->regs[RL_REG_STATUS] &= ~RL_STATUS_C;
+	if(flag) {
+		rld->regs[RL_REG_STATUS] |= RL_STATUS_C;
+	}
+}
+
+static void
+raise_V(struct node *n, int flag)
+{
+	struct computer_data *cd;
+	struct rl_data *rld;
+
+	cd = n->data;
+	rld = cd->data;
+
+	rld->regs[RL_REG_STATUS] &= ~RL_STATUS_V;
+	if(flag) {
+		rld->regs[RL_REG_STATUS] |= RL_STATUS_V;
+	}
+}
+
+static void
+MOV(struct node *n, struct decoded_instr di)
+{
+	set_reg(n, di.data.reg_ds.destination, get_reg(n, di.data.reg_ds.source));
+	advance_pc(n);
+}
+
+static void
+ADD(struct node *n, struct decoded_instr di)
+{
+	uint32_t a, b, res;
+
+	a = get_reg(n, di.data.reg_dab.a);
+	b = get_reg(n, di.data.reg_dab.b);
+	res = a + b;
+
+	set_reg(n, di.data.reg_dab.destination, res);
+
+	raise_Z(n, res);
+	raise_N(n, res);
+	raise_C(n, (res & 0xffff0000) != 0);
+	raise_V(n, ((~(a ^ b) & (a ^ res)) & 0x8000) != 0);
+
+	advance_pc(n);
+}
+
+static void
+SUB(struct node *n, struct decoded_instr di)
+{
+	uint32_t a, b, res;
+
+	a = get_reg(n, di.data.reg_dab.a);
+	b = get_reg(n, di.data.reg_dab.b);
+	res = a - b;
+
+	set_reg(n, di.data.reg_dab.destination, res);
+
+	raise_Z(n, res);
+	raise_N(n, res);
+	raise_C(n, (res & 0xffff0000) != 0);
+	raise_V(n, ((~(a ^ b) & (a ^ res)) & 0x8000) != 0);
+
+	advance_pc(n);
 }
 

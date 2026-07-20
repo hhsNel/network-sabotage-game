@@ -79,6 +79,8 @@ computer_destroy(struct node *n)
 	struct computer_data *cd;
 
 	cd = (struct computer_data *)n->data;
-	cd->exec(n);
+	cd->destroy(n);
+
+	free(n->data);
 }
 

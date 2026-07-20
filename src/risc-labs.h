@@ -95,5 +95,7 @@ enum rl_opcode {
 	RL_ILLEGAL_INSTR = -1,
 };
 
+struct node create_rl_computer(unsigned int points);
+
 #endif
 
