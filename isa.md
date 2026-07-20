@@ -87,8 +87,8 @@
 | [0][0][011][DDD]   [AAA][BBB][11]   | XNOR     | Bitwise xnors the A and B registers, then stores the result in D. Sets ZN. Isn't available on all computers |
 | [0][0][100][DDD]   [SSS][0][NNNN]   | SHL      | Shifts the S register by N to the left, then stores the result in D. Sets ZNC |
 | [0][0][100][DDD]   [SSS][1][NNNN]   | SHR      | Shifts the S register by N to the right, then stores the result in D. Sets ZNC |
-| [0][0][101][DDD]   [AAA][BBB][?][0] | BSH      | If B is positive, shifts A right by the lowest nibble of B. Otherwise, shifts A left by the lowest nibble of B. Stores the result in D. Sets ZNC. Isn't available on all computers |
-| [0][0][101][DDD]   [AAA][BBB][?][1] | ABSH     | If B is positive, shifts all but the MSB of A right by the lowest nibble of B. Otherwise, shifts A left by the lowest nibble of B. Stores the result in D. Sets ZNC. Isn't available on all computers |
+| [0][0][101][DDD]   [AAA][BBB][?][0] | BSH      | If B is positive, shifts A right by the lowest nibble of B. Otherwise, shifts A left by the lowest nibble of abs(B). Stores the result in D. Sets ZNC. Isn't available on all computers |
+| [0][0][101][DDD]   [AAA][BBB][?][1] | ABSH     | If B is positive, shifts all but the MSB of A right by the lowest nibble of B. Otherwise, shifts A left by the lowest nibble of abs(B). Stores the result in D. Sets ZNC. Isn't available on all computers |
 | [0][0][110][???]   [000][000][??]   | NOP      | Does nothing |
 | [0][0][110][???]   [AAA][BBB][??]   | XCH      | Writes the value of the B register into the A register, and simultaniously writes the value of A into B |
 | [0][0][111][???]   [RRR][????]  [0] | TST      | Sets some flags in the Status register based on the value of R. Sets ZN |
