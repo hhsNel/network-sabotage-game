@@ -1,0 +1,133 @@
+#!/usr/bin/expect -f
+
+set timeout 2
+set binary "build/tests/risc-labs-harness"
+if {$argc > 0} {
+	set binary [lindex $argv 0]
+}
+
+set pass_count 0
+set fail_count 0
+
+proc pass_test {msg} {
+	global pass_count
+	incr pass_count
+	puts "PASS: $msg"
+}
+
+proc fail_test {msg} {
+	global fail_count
+	incr fail_count
+	puts "FAIL: $msg"
+}
+
+spawn $binary
+expect "READY"
+
+proc expect_ok {cmd pattern desc} {
+	send "$cmd\r"
+	expect {
+		-re $pattern        { pass_test $desc }
+		-re {ERROR[^\r\n]*} { fail_test "$desc (got: $expect_out(0,string))" }
+		timeout             { fail_test "$desc (timeout)" }
+		eof                 { fail_test "$desc (harness exited unexpectedly)" }
+	}
+}
+
+proc do_reset {} { expect_ok "reset" {OK} "reset" }
+proc do_exec  {} { expect_ok "exec"  {OK} "exec" }
+
+proc get_pc {} {
+	send "pc\r"
+	expect {
+		-re {OK (\d+)}      { return $expect_out(1,string) }
+		-re {ERROR[^\r\n]*} { fail_test "pc (got: $expect_out(0,string))"; return "" }
+		timeout             { fail_test "pc (timeout)"; return "" }
+	}
+}
+
+proc store_byte {addr value} {
+	expect_ok "store_b $addr $value" {OK} "store_b $addr $value"
+}
+
+proc store_word {addr value} {
+	expect_ok "store_w $addr $value" {OK} "store_w $addr $value"
+}
+
+proc load_byte {addr} {
+	send "load_b $addr\r"
+	expect {
+		-re {OK (\d+)}      { return $expect_out(1,string) }
+		-re {ERROR[^\r\n]*} { fail_test "load_b $addr (got: $expect_out(0,string))"; return "" }
+		timeout             { fail_test "load_b $addr (timeout)"; return "" }
+	}
+}
+
+proc load_word {addr} {
+	send "load_w $addr\r"
+	expect {
+		-re {OK (\d+)}      { return $expect_out(1,string) }
+		-re {ERROR[^\r\n]*} { fail_test "load_w $addr (got: $expect_out(0,string))"; return "" }
+		timeout             { fail_test "load_w $addr (timeout)"; return "" }
+	}
+}
+
+proc get_regs {} {
+	send "regs\r"
+	expect {
+		-re {OK ([[:xdigit:]]{4}(?: [[:xdigit:]]{4}){6})} { return $expect_out(1,string) }
+		-re {ERROR[^\r\n]*}                               { fail_test "regs (got: $expect_out(0,string))"; return "" }
+		timeout                                           { fail_test "regs (timeout)"; return "" }
+	}
+}
+
+proc dump {addr count} {
+	send "dump $addr $count\r"
+	expect {
+		-re {OK ([[:xdigit:]]{2}(?: [[:xdigit:]]{2})+)} { return $expect_out(1,string) }
+		-re {ERROR[^\r\n]*}                             { fail_test "dump $addr $count (got: $expect_out(0,string))"; return "" }
+		timeout                                         { fail_test "dump $addr $count (timeout)"; return "" }
+	}
+}
+
+proc assemble {code} {
+	send "assemble\r"
+	send $code
+	send "\rEOF\r"
+
+	expect {
+		-re {OK|FAIL[^\r\n]*} { return $expect_out(0,string) }
+		-re {ERROR[^\r\n]*}   { fail_test "assemble (got: $expect_out(0,string))"; return "" }
+		timeout               { fail_test "assemble (got: $expect_out(0,string))"; return "" }
+	}
+}
+
+proc assert_eq {actual expected desc} {
+	if {$actual == $expected} {
+		pass_test $desc
+	} else {
+		fail_test "$desc (expected $expected, got $actual)"
+	}
+}
+
+do_reset
+assert_eq [get_regs] "0000 0000 0000 0000 0000 0000 0000" "regs zero out at reset"
+assert_eq [assemble {
+	MOV r0 r1
+	ADD r0 r2 r3
+}] "OK" "assemble simple program"
+assert_eq [dump 0 4] "00 20 00 4d" "program assembled correctly"
+store_byte 8 42
+assert_eq [load_byte 8] 42 "store_b/load_b roundtrip"
+do_exec
+assert_eq [get_pc] 2 "pc advances after one exec"
+
+send "exit\r"
+expect eof
+
+puts "\n$pass_count passed, $fail_count failed"
+if {$fail_count > 0} {
+	exit 1
+}
+exit 0
+

@@ -2,6 +2,7 @@
 #define RISC_LABS_H
 
 #include "computer.h"
+#include "util.h"
 
 enum rl_reg {
 	RL_REG_R0 = 0,
@@ -95,7 +96,16 @@ enum rl_opcode {
 	RL_ILLEGAL_INSTR = -1,
 };
 
+typedef uint64_t rl_capabilities;
+
+struct rl_data {
+	rl_capabilities caps;
+	uint16_t regs[7]; /* plus the ZERO register */
+	uint8_t last_port : 3;
+};
+
 struct node create_rl_computer(unsigned int points);
+struct assembly_result rl_asm(uint8_t *out_buf, size_t out_size, char *in_str);
 
 #endif
 

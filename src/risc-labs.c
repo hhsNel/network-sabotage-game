@@ -7,8 +7,6 @@
 
 #include "util.h"
 
-typedef uint64_t capabilities;
-
 #define CAP_MOV       0x0000000000000001ULL
 #define CAP_ADD       0x0000000000000002ULL
 #define CAP_SUB       0x0000000000000004ULL
@@ -97,7 +95,7 @@ typedef uint64_t capabilities;
 #define CAPS_1PT 10
 #define CAPS_2PT CAPS_1PT + 4
 #define CAPS_3PT CAPS_2PT + 1
-static capabilities all_caps[] = {
+static rl_capabilities all_caps[] = {
 	CAP_ADVANCED_ARITHMETIC, CAP_ADVANCED_LOGIC, CAP_SHIFTS, CAP_CMP, CAP_MXCH, CAP_JRELc, CAP_JUMPS, CAP_IOMEM, CAP_ANYLAST, CAP_FLAGS, /* 1pt */
 	CAP_REGS, CAP_PORTS, CAP_PORT_OUT, CAP_PORT_IN, /* 2pt */
 	CAP_512MEM, /* 3pt */
@@ -124,13 +122,24 @@ struct decoded_instr {
 	} data;
 };
 
-struct rl_data {
-	capabilities caps;
-	uint16_t regs[7]; /* plus the ZERO register */
-	uint8_t last_port : 3;
+enum rl_asm_token_type { RL_ASM_TK_MNEMONIC, RL_ASM_TK_REG, RL_ASM_TK_PORT, RL_ASM_TK_NUMBER, RL_ASM_TK_EQU, RL_ASM_TK_IDENT, RL_ASM_TK_COLON, RL_ASM_TK_EOF, RL_ASM_TK_ERROR };
+struct rl_asm_token {
+	enum rl_asm_token_type type;
+	union {
+		enum rl_opcode mnemonic;
+		enum rl_reg reg;
+		enum rl_port port;
+		uint16_t number;
+		struct {
+			char *begin;
+			size_t length;
+		} ident;
+	} data;
+	unsigned int line, column;
 };
 
-static capabilities generate_caps(unsigned int spare_points);
+static struct rl_asm_token next_tk(char **in_str, unsigned int *line, unsigned int *column);
+static rl_capabilities generate_caps(unsigned int spare_points);
 static struct decoded_instr decode(uint16_t raw_instr);
 static void rl_reset(struct node *n);
 static void rl_exec(struct node *n);
@@ -193,10 +202,391 @@ create_rl_computer(unsigned int points)
 	return n;
 }
 
-static capabilities
+struct assembly_result
+rl_asm(uint8_t *out_buf, size_t out_size, char *in_str)
+{
+	struct rl_asm_token *tokens;
+	unsigned int num_tokens, cap_tokens;
+	struct assembly_result res;
+	struct symbol { char *begin; size_t length; uint16_t value; };
+	struct symbol *symbol_table;
+	unsigned int num_symbols, cap_symbols;
+	enum operand_type { OP_REGISTER, OP_PORT, OP_NUMBER, OP_RELATIVE, OP_NONE };
+	struct operand { enum operand_type type; uint8_t start_index; uint8_t bit_width; };
+	struct instr_shape { enum rl_opcode mnemonic; uint16_t template; struct operand operands[3]; };
+	static struct instr_shape instruction_shapes[] = {
+#define REGISTER(IDX) { OP_REGISTER, (IDX), 3 }
+#define PORT(IDX) { OP_PORT, (IDX), 3 }
+#define NUMBER(IDX,WIDTH) { OP_NUMBER, (IDX), (WIDTH) }
+#define NONE { OP_NONE, 0, 0 }
+		{ RL_MOV, 0x0000, { REGISTER(5), REGISTER(8), NONE } },
+		{ RL_ADD, 0x0001, { REGISTER(5), REGISTER(8), REGISTER(11) } },
+		{ RL_SUB, 0x0002, { REGISTER(5), REGISTER(8), REGISTER(11) } },
+#undef REGISTER
+#undef PORT
+#undef NUMBER
+#undef NONE
+	};
+	struct instr_record { struct instr_shape shape; struct rl_asm_token operands[3]; };
+	struct instr_record *instr_records;
+	unsigned int num_instr_records, cap_instr_records;
+	unsigned int i, j;
+	uint16_t assembled_instr, instr_part;
+
+	tokens = NULL;
+	num_tokens = cap_tokens = 0;
+	res.line = res.column = 0;
+	do {
+		if(num_tokens == cap_tokens) {
+			cap_tokens += 16;
+			tokens = realloc(tokens, cap_tokens * sizeof(struct rl_asm_token));
+			if(! tokens) {
+				fprintf(stderr, "couldn't realloc tokens for more (%u)\n", cap_tokens);
+				exit(1);
+			}
+		}
+		tokens[num_tokens] = next_tk(&in_str, &res.line, &res.column);
+		if(tokens[num_tokens].type == RL_ASM_TK_ERROR) {
+			res.success = 0;
+			snprintf(res.reason, sizeof(res.reason), "unknown token around %s", in_str);
+			return res;
+		}
+	} while(tokens[num_tokens++].type != RL_ASM_TK_EOF);
+
+	instr_records = NULL;
+	num_instr_records = cap_instr_records = 0;
+	symbol_table = NULL;
+	num_symbols = cap_symbols = 0;
+	i = 0;
+	while(i < num_tokens && tokens[i].type != RL_ASM_TK_EOF) {
+		switch(tokens[i].type) {
+		case RL_ASM_TK_IDENT:
+			if(num_symbols == cap_symbols) {
+				cap_symbols += 16;
+				symbol_table = realloc(symbol_table, cap_symbols * sizeof(struct symbol));
+				if(! symbol_table) {
+					fprintf(stderr, "couldn't realloc symbol_table for more (%u)\n", cap_symbols);
+					exit(1);
+				}
+			}
+			switch(tokens[i+1].type) {
+			case RL_ASM_TK_COLON:
+				symbol_table[num_symbols++] = (struct symbol){ tokens[i].data.ident.begin, tokens[i].data.ident.length, 2 * num_instr_records };
+				i += 2;
+				break;
+			case RL_ASM_TK_EQU:
+				if(tokens[i+2].type != RL_ASM_TK_NUMBER) {
+					res.success = 0;
+					res.line = tokens[i+2].line;
+					res.column = tokens[i+2].column;
+					snprintf(res.reason, sizeof(res.reason), "expected NUMBER after IDENT EQU");
+					return res;
+				}
+				symbol_table[num_symbols++] = (struct symbol){ tokens[i].data.ident.begin, tokens[i].data.ident.length, tokens[i+1].data.number };
+				i += 3;
+				break;
+			default:
+				res.success = 0;
+				res.line = tokens[i+1].line;
+				res.column = tokens[i+1].column;
+				snprintf(res.reason, sizeof(res.reason), "expected COLON or EQU after IDENT");
+				return res;
+			}
+			break;
+		case RL_ASM_TK_MNEMONIC:
+			for(j = 0; j < sizeof(instruction_shapes)/sizeof(*instruction_shapes); ++j) {
+				if(tokens[i].data.mnemonic == instruction_shapes[j].mnemonic) break;
+			}
+			if(j == sizeof(instruction_shapes)/sizeof(*instruction_shapes)) {
+				res.success = 0;
+				res.line = tokens[i].line;
+				res.column = tokens[i].column;
+				snprintf(res.reason, sizeof(res.reason), "unknown instruction shape");
+				return res;
+			}
+			if(num_instr_records == cap_instr_records) {
+				cap_instr_records += 16;
+				instr_records = realloc(instr_records, cap_instr_records * sizeof(struct instr_record));
+				if(! instr_records) {
+					fprintf(stderr, "couldn't realloc instr_records for more (%u)\n", cap_instr_records);
+					exit(1);
+				}
+			}
+			instr_records[num_instr_records].shape = instruction_shapes[j];
+			++i;
+#define HANDLE_OPERAND(OP_IDX) \
+			switch(instruction_shapes[j].operands[OP_IDX].type) { \
+			case OP_REGISTER: \
+				if(tokens[i].type != RL_ASM_TK_REG) { res.success=0; res.line=tokens[i].line; res.column=tokens[i].column; snprintf(res.reason,sizeof(res.reason),"expected register as operand"); return res; } \
+				instr_records[num_instr_records].operands[OP_IDX] = tokens[i]; \
+				++i; \
+				break; \
+			case OP_PORT: \
+				if(tokens[i].type != RL_ASM_TK_PORT) { res.success=0; res.line=tokens[i].line; res.column=tokens[i].column; snprintf(res.reason,sizeof(res.reason),"expected port as operand"); return res; } \
+				instr_records[num_instr_records].operands[OP_IDX] = tokens[i]; \
+				++i; \
+				break; \
+			case OP_NUMBER: \
+			case OP_RELATIVE: \
+				if(tokens[i].type != RL_ASM_TK_NUMBER && tokens[i].type != RL_ASM_TK_IDENT) { \
+					res.success=0; \
+					res.line=tokens[i].line; \
+					res.column=tokens[i].column; \
+					snprintf(res.reason,sizeof(res.reason),"expected number or identifier as operand"); \
+					return res; \
+				} \
+				instr_records[num_instr_records].operands[OP_IDX] = tokens[i]; \
+				++i; \
+				break; \
+			case OP_NONE: \
+				break; \
+			}
+			HANDLE_OPERAND(0);
+			HANDLE_OPERAND(1);
+			HANDLE_OPERAND(2);
+#undef HANDLE_OPERAND
+			++num_instr_records;
+			break;
+		default:
+			res.success = 0;
+			res.line = tokens[i].line;
+			res.column = tokens[i].column;
+			snprintf(res.reason, sizeof(res.reason), "expected IDENT or MNEMONIC in global ctx");
+			return res;
+		}
+	}
+
+	memset(out_buf, 0, out_size);
+	for(i = 0; i < num_instr_records; ++i) {
+		if(out_size < 2) {
+			res.success = 0;
+			res.line = 0;
+			res.column = 0;
+			snprintf(res.reason, sizeof(res.reason), "ran out of space for instructions");
+			return res;
+		}
+
+		assembled_instr = instr_records[i].shape.template;
+#define HANDLE_OPERAND(IDX) \
+		if(instr_records[i].shape.operands[IDX].type != OP_NONE) { \
+			switch(instr_records[i].operands[IDX].type) { \
+			case RL_ASM_TK_REG: \
+				instr_part = instr_records[i].operands[IDX].data.reg; \
+				break; \
+			case RL_ASM_TK_PORT: \
+				instr_part = instr_records[i].operands[IDX].data.port; \
+				break; \
+			case RL_ASM_TK_IDENT: \
+				for(j = 0; j < num_symbols; ++j) { \
+					if( instr_records[i].operands[IDX].data.ident.length == symbol_table[j].length && \
+						strncmp(instr_records[i].operands[IDX].data.ident.begin, \
+						symbol_table[j].begin, \
+						symbol_table[j].length) == 0 ) { \
+						instr_part = symbol_table[j].value; \
+						break; \
+					} \
+				} \
+				if(j == num_symbols) { \
+					res.success = 0; \
+					res.line = 0; \
+					res.column = 0; \
+					snprintf(res.reason, sizeof(res.reason), "couldn't find symbol: %.*s", \
+							(int)instr_records[i].operands[IDX].data.ident.length, \
+							instr_records[i].operands[IDX].data.ident.begin); \
+					return res; \
+				} \
+				break; \
+			case RL_ASM_TK_NUMBER: \
+				instr_part = instr_records[i].operands[IDX].data.number; \
+				break; \
+			default: exit(1); /* something went very wrong */ \
+			} \
+			if(instr_part & ~((1 << instr_records[i].shape.operands[IDX].bit_width) - 1)) { \
+				res.success = 0; \
+				res.line = 0; \
+				res.column = 0; \
+				snprintf(res.reason, sizeof(res.reason), "operand too big (bitwise)"); \
+				return res; \
+			} \
+			assembled_instr |= instr_part << (16 - instr_records[i].shape.operands[IDX].start_index - instr_records[i].shape.operands[IDX].bit_width); \
+		}
+		HANDLE_OPERAND(0);
+		HANDLE_OPERAND(1);
+		HANDLE_OPERAND(2);
+#undef HANDLE_OPERAND
+		out_buf[0] = assembled_instr >> 8;
+		out_buf[1] = assembled_instr;
+		out_buf += 2;
+		out_size -= 2;
+	}
+
+	res.success = 1;
+	return res;
+}
+
+static struct rl_asm_token
+next_tk(char **in_str, unsigned int *line, unsigned int *column)
+{
+	struct tk_translation { char *str; struct rl_asm_token translation; };
+	static struct tk_translation tk_lookup[] = {
+		{ "mov",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_MOV},0,0} },
+		{ "MOV",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_MOV},0,0} },
+		{ "add",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_ADD},0,0} },
+		{ "ADD",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_ADD},0,0} },
+		{ "sub",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_SUB},0,0} },
+		{ "SUB",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_SUB},0,0} },
+		{ "r0",        {RL_ASM_TK_REG,{.reg=RL_REG_R0},0,0} },
+		{ "R0",        {RL_ASM_TK_REG,{.reg=RL_REG_R0},0,0} },
+		{ "r1",        {RL_ASM_TK_REG,{.reg=RL_REG_R1},0,0} },
+		{ "R1",        {RL_ASM_TK_REG,{.reg=RL_REG_R1},0,0} },
+		{ "r2",        {RL_ASM_TK_REG,{.reg=RL_REG_R2},0,0} },
+		{ "R2",        {RL_ASM_TK_REG,{.reg=RL_REG_R2},0,0} },
+		{ "r3",        {RL_ASM_TK_REG,{.reg=RL_REG_R3},0,0} },
+		{ "R3",        {RL_ASM_TK_REG,{.reg=RL_REG_R3},0,0} },
+		{ "r4",        {RL_ASM_TK_REG,{.reg=RL_REG_R4},0,0} },
+		{ "R4",        {RL_ASM_TK_REG,{.reg=RL_REG_R4},0,0} },
+		{ "r5",        {RL_ASM_TK_REG,{.reg=RL_REG_R5},0,0} },
+		{ "R5",        {RL_ASM_TK_REG,{.reg=RL_REG_R5},0,0} },
+		{ "status",    {RL_ASM_TK_REG,{.reg=RL_REG_STATUS},0,0} },
+		{ "STATUS",    {RL_ASM_TK_REG,{.reg=RL_REG_STATUS},0,0} },
+		{ "zero",      {RL_ASM_TK_REG,{.reg=RL_REG_ZERO},0,0} },
+		{ "ZERO",      {RL_ASM_TK_REG,{.reg=RL_REG_ZERO},0,0} },
+		{ "up",        {RL_ASM_TK_PORT,{.port=RL_PORT_UP},0,0} },
+		{ "UP",        {RL_ASM_TK_PORT,{.port=RL_PORT_UP},0,0} },
+		{ "right",     {RL_ASM_TK_PORT,{.port=RL_PORT_RIGHT},0,0} },
+		{ "RIGHT",     {RL_ASM_TK_PORT,{.port=RL_PORT_RIGHT},0,0} },
+		{ "down",      {RL_ASM_TK_PORT,{.port=RL_PORT_DOWN},0,0} },
+		{ "DOWN",      {RL_ASM_TK_PORT,{.port=RL_PORT_DOWN},0,0} },
+		{ "left",      {RL_ASM_TK_PORT,{.port=RL_PORT_LEFT},0,0} },
+		{ "LEFT",      {RL_ASM_TK_PORT,{.port=RL_PORT_LEFT},0,0} },
+		{ "any",       {RL_ASM_TK_PORT,{.port=RL_PORT_ANY},0,0} },
+		{ "ANY",       {RL_ASM_TK_PORT,{.port=RL_PORT_ANY},0,0} },
+		{ "last",      {RL_ASM_TK_PORT,{.port=RL_PORT_LAST},0,0} },
+		{ "LAST",      {RL_ASM_TK_PORT,{.port=RL_PORT_LAST},0,0} },
+		{ "opposite",  {RL_ASM_TK_PORT,{.port=RL_PORT_OPPOSITE},0,0} },
+		{ "OPPOSITE",  {RL_ASM_TK_PORT,{.port=RL_PORT_OPPOSITE},0,0} },
+		{ "clockwise", {RL_ASM_TK_PORT,{.port=RL_PORT_CLOCKWISE},0,0} },
+		{ "CLOCKWISE", {RL_ASM_TK_PORT,{.port=RL_PORT_CLOCKWISE},0,0} },
+		{ "equ",       {RL_ASM_TK_EQU,{0},0,0} },
+		{ "EQU",       {RL_ASM_TK_EQU,{0},0,0} },
+		{ ":",         {RL_ASM_TK_COLON,{0},0,0} },
+	};
+	unsigned int i;
+	uint16_t num;
+	unsigned int begin_col;
+	struct rl_asm_token tk;
+
+	while(**in_str == ' ' || **in_str == '\t' || **in_str == '\n') {
+		if(**in_str == '\n') {
+			*column = 0;
+			++ *line;
+		} else {
+			++ *column;
+		}
+		++ *in_str;
+	}
+	if(! **in_str) return (struct rl_asm_token){RL_ASM_TK_EOF,{0},0,0};
+
+	for(i = 0; i < sizeof(tk_lookup)/sizeof(*tk_lookup); ++i) {
+		if(strncmp(*in_str, tk_lookup[i].str, strlen(tk_lookup[i].str)) == 0) {
+			begin_col = *column;
+			*in_str += strlen(tk_lookup[i].str);
+			*column += strlen(tk_lookup[i].str);
+			tk = tk_lookup[i].translation;
+			tk.line = *line;
+			tk.column = begin_col;
+			return tk;
+		}
+	}
+
+	if( (*in_str)[0] == '0' && (*in_str)[1] == 'x' &&
+			(((*in_str)[2] >= '0' && (*in_str)[2] <= '9') ||
+			 ((*in_str)[2] >= 'a' && (*in_str)[2] <= 'f') ||
+			 ((*in_str)[2] >= 'A' && (*in_str)[2] <= 'F')) ) {
+		num = 0;
+		begin_col = *column;
+		*in_str += 2;
+		*column += 2;
+		while(
+				(**in_str >= '0' && **in_str <= '9') ||
+				(**in_str >= 'a' && **in_str <= 'f') ||
+				(**in_str >= 'A' && **in_str <= 'F')) {
+			num *= 16;
+			if(**in_str >= '0' && **in_str <= '9') num += **in_str - '0';
+			else if(**in_str >= 'a' && **in_str <= 'f') num += **in_str - 'a' + 10;
+			else num += **in_str - 'A' + 10;
+			++ *in_str;
+			++ *column;
+		}
+		tk.type = RL_ASM_TK_NUMBER;
+		tk.data.number = num;
+		tk.line = *line;
+		tk.column = begin_col;
+		return tk;
+	}
+
+	if( (*in_str)[0] == '0' && (*in_str)[1] == 'b' &&
+			((*in_str)[2] == '0' || (*in_str)[2] == '1') ) {
+		num = 0;
+		begin_col = *column;
+		*in_str += 2;
+		*column += 2;
+		while(**in_str == '0' || **in_str == '1') {
+			num *= 2;
+			num += **in_str - '0';
+			++ *in_str;
+			++ *column;
+		}
+		tk.type = RL_ASM_TK_NUMBER;
+		tk.data.number = num;
+		tk.line = *line;
+		tk.column = begin_col;
+		return tk;
+	}
+
+	if( **in_str >= '0' && **in_str <= '9' ) {
+		num = 0;
+		begin_col = *column;
+		while(**in_str >= '0' && **in_str <= '9') {
+			num *= 10;
+			num += **in_str - '0';
+			++ *in_str;
+			++ *column;
+		}
+		tk.type = RL_ASM_TK_NUMBER;
+		tk.data.number = num;
+		tk.line = *line;
+		tk.column = begin_col;
+		return tk;
+	}
+
+	if( (**in_str >= 'a' && **in_str <= 'z') ||
+		(**in_str >= 'A' && **in_str <= 'Z') ||
+		**in_str == '_' ) {
+		tk.data.ident.begin = *in_str;
+		tk.data.ident.length = 0;
+		begin_col = *column;
+		while( (**in_str >= 'a' && **in_str <= 'z') ||
+			(**in_str >= 'A' && **in_str <= 'Z') ||
+			**in_str == '_' ||
+			(**in_str >= '0' && **in_str <= '9') ) {
+			++ *in_str;
+			++ *column;
+			++ tk.data.ident.length;
+		}
+		tk.type = RL_ASM_TK_IDENT;
+		tk.line = *line;
+		tk.column = begin_col;
+		return tk;
+	}
+
+	return (struct rl_asm_token){RL_ASM_TK_ERROR,{0},0,0};
+}
+
+static rl_capabilities
 generate_caps(unsigned int spare_points)
 {
-	capabilities c;
+	rl_capabilities c;
 	unsigned int idx;
 
 	c = 0;
@@ -301,20 +691,20 @@ decode(uint16_t raw_instr)
 				case 0x2:
 					/* JE(N)c */
 					if(raw_instr & 0x0040) {
-						/* JEc */
-						return (struct decoded_instr){ RL_JEc, {.j_mr={ EXTRACT(5, 4), EXTRACT(10, 6) }} };
-					} else {
 						/* JENc */
 						return (struct decoded_instr){ RL_JENc, {.j_mr={ EXTRACT(5, 4), EXTRACT(10, 6) }} };
+					} else {
+						/* JEc */
+						return (struct decoded_instr){ RL_JEc, {.j_mr={ EXTRACT(5, 4), EXTRACT(10, 6) }} };
 					}
 				case 0x3:
 					/* JA(N)c */
 					if(raw_instr & 0x0040) {
-						/* JAc */
-						return (struct decoded_instr){ RL_JAc, {.j_mr={ EXTRACT(5, 4), EXTRACT(10, 6) }} };
-					} else {
 						/* JANc */
 						return (struct decoded_instr){ RL_JANc, {.j_mr={ EXTRACT(5, 4), EXTRACT(10, 6) }} };
+					} else {
+						/* JAc */
+						return (struct decoded_instr){ RL_JAc, {.j_mr={ EXTRACT(5, 4), EXTRACT(10, 6) }} };
 					}
 				}
 			}
@@ -390,10 +780,10 @@ decode(uint16_t raw_instr)
 				/* (A)BSH */
 				if(raw_instr & 0x0001) {
 					/* ABSH */
-					return (struct decoded_instr){ RL_ABSH, {.reg_dsn={ EXTRACT(5, 3), EXTRACT(8, 3), EXTRACT(11, 3) }} };
+					return (struct decoded_instr){ RL_ABSH, {.reg_dab={ EXTRACT(5, 3), EXTRACT(8, 3), EXTRACT(11, 3) }} };
 				} else {
-					/* SHL */
-					return (struct decoded_instr){ RL_BSH, {.reg_dsn={ EXTRACT(5, 3), EXTRACT(8, 3), EXTRACT(11, 3) }} };
+					/* BSH */
+					return (struct decoded_instr){ RL_BSH, {.reg_dab={ EXTRACT(5, 3), EXTRACT(8, 3), EXTRACT(11, 3) }} };
 				}
 			case 0x6:
 				/* XCH */
@@ -449,7 +839,7 @@ rl_exec(struct node *n)
 	di = decode(raw_instr);
 
 	if(di.op != RL_ILLEGAL_INSTR && rld->caps & (1 << di.op)) {
-		if(instruction_lut[di.op]) {
+		if((unsigned int)di.op < sizeof(instruction_lut)/sizeof(*instruction_lut) && instruction_lut[di.op]) {
 			instruction_lut[di.op](n, di);
 		} else {
 			/* probably an unimplemented instr, or something went very wrong */
@@ -571,6 +961,8 @@ raise_C(struct node *n, int flag)
 	cd = n->data;
 	rld = cd->data;
 
+	if(! (rld->caps & CAP_C)) return;
+
 	rld->regs[RL_REG_STATUS] &= ~RL_STATUS_C;
 	if(flag) {
 		rld->regs[RL_REG_STATUS] |= RL_STATUS_C;
@@ -585,6 +977,8 @@ raise_V(struct node *n, int flag)
 
 	cd = n->data;
 	rld = cd->data;
+
+	if(! (rld->caps & CAP_V)) return;
 
 	rld->regs[RL_REG_STATUS] &= ~RL_STATUS_V;
 	if(flag) {
@@ -632,7 +1026,7 @@ SUB(struct node *n, struct decoded_instr di)
 	raise_Z(n, res);
 	raise_N(n, res);
 	raise_C(n, (res & 0xffff0000) != 0);
-	raise_V(n, ((~(a ^ b) & (a ^ res)) & 0x8000) != 0);
+	raise_V(n, (((a ^ b) & (a ^ res)) & 0x8000) != 0);
 
 	advance_pc(n);
 }

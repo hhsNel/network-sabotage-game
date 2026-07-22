@@ -69,8 +69,11 @@ computer_update(struct node *n)
 {
 	struct computer_data *cd;
 
-	cd = (struct computer_data *)n->data;
-	cd->exec(n);
+	cd = n->data;
+
+	if(! cd->local_clock) cd->exec(n);
+	++ cd->local_clock;
+	cd->local_clock %= cd->global_clock_frac;
 }
 
 static void
@@ -78,7 +81,7 @@ computer_destroy(struct node *n)
 {
 	struct computer_data *cd;
 
-	cd = (struct computer_data *)n->data;
+	cd = n->data;
 	cd->destroy(n);
 
 	free(n->data);
