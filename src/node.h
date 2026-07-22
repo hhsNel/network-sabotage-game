@@ -10,7 +10,8 @@ enum node_type {
 
 struct node {
 	enum node_type type;
-	struct port *up, *right, *down, *left;
+	struct port *read_up, *read_right, *read_down, *read_left;
+	struct port *write_up, *write_right, *write_down, *write_left;
 	void (*update)(struct node *);
 	void (*destroy)(struct node *);
 	void *data;

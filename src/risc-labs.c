@@ -151,15 +151,94 @@ static void raise_Z(struct node *n, uint16_t cmp_value);
 static void raise_N(struct node *n, uint16_t cmp_value);
 static void raise_C(struct node *n, int flag);
 static void raise_V(struct node *n, int flag);
+static int evaluate_condition(struct node *n, enum rl_condition cond);
 static void MOV(struct node *n, struct decoded_instr di);
 static void ADD(struct node *n, struct decoded_instr di);
 static void SUB(struct node *n, struct decoded_instr di);
+static void MUL(struct node *n, struct decoded_instr di);
+static void DIV(struct node *n, struct decoded_instr di);
+static void MOD(struct node *n, struct decoded_instr di);
+static void AND(struct node *n, struct decoded_instr di);
+static void OR(struct node *n, struct decoded_instr di);
+static void NAND(struct node *n, struct decoded_instr di);
+static void NOR(struct node *n, struct decoded_instr di);
+static void XOR(struct node *n, struct decoded_instr di);
+static void XNOR(struct node *n, struct decoded_instr di);
+static void SHL(struct node *n, struct decoded_instr di);
+static void SHR(struct node *n, struct decoded_instr di);
+static void BSH(struct node *n, struct decoded_instr di);
+static void ABSH(struct node *n, struct decoded_instr di);
+static void XCH(struct node *n, struct decoded_instr di);
+static void TST(struct node *n, struct decoded_instr di);
+static void CMP(struct node *n, struct decoded_instr di);
+static void IMM(struct node *n, struct decoded_instr di);
+static void IMMS(struct node *n, struct decoded_instr di);
+static void LOADBR(struct node *n, struct decoded_instr di);
+static void LOADBI(struct node *n, struct decoded_instr di);
+static void LOADSR(struct node *n, struct decoded_instr di);
+static void LOADSI(struct node *n, struct decoded_instr di);
+static void LOADWR(struct node *n, struct decoded_instr di);
+static void LOADWI(struct node *n, struct decoded_instr di);
+static void STOREBR(struct node *n, struct decoded_instr di);
+static void STOREBI(struct node *n, struct decoded_instr di);
+static void STOREWR(struct node *n, struct decoded_instr di);
+static void STOREWI(struct node *n, struct decoded_instr di);
+static void MXCH(struct node *n, struct decoded_instr di);
+static void Jc(struct node *n, struct decoded_instr di);
+static void JRELc(struct node *n, struct decoded_instr di);
+static void JEc(struct node *n, struct decoded_instr di);
+static void JENc(struct node *n, struct decoded_instr di);
+static void JAc(struct node *n, struct decoded_instr di);
+static void JANc(struct node *n, struct decoded_instr di);
+static void IN(struct node *n, struct decoded_instr di);
+static void OUT(struct node *n, struct decoded_instr di);
+static void INM(struct node *n, struct decoded_instr di);
+static void OUTM(struct node *n, struct decoded_instr di);
 
 static void (*instruction_lut[])(struct node *n, struct decoded_instr di) = {
 #define INSTR(NAME) [CONCAT2(RL_,NAME)] = NAME
 	INSTR(MOV),
 	INSTR(ADD),
 	INSTR(SUB),
+	INSTR(MUL),
+	INSTR(DIV),
+	INSTR(MOD),
+	INSTR(AND),
+	INSTR(OR),
+	INSTR(NAND),
+	INSTR(NOR),
+	INSTR(XOR),
+	INSTR(XNOR),
+	INSTR(SHL),
+	INSTR(SHR),
+	INSTR(BSH),
+	INSTR(ABSH),
+	INSTR(XCH),
+	INSTR(TST),
+	INSTR(CMP),
+	INSTR(IMM),
+	INSTR(IMMS),
+	INSTR(LOADBR),
+	INSTR(LOADBI),
+	INSTR(LOADSR),
+	INSTR(LOADSI),
+	INSTR(LOADWR),
+	INSTR(LOADWI),
+	INSTR(STOREBR),
+	INSTR(STOREBI),
+	INSTR(STOREWR),
+	INSTR(STOREWI),
+	INSTR(MXCH),
+	INSTR(Jc),
+	INSTR(JRELc),
+	INSTR(JEc),
+	INSTR(JENc),
+	INSTR(JAc),
+	INSTR(JANc),
+	INSTR(IN),
+	INSTR(OUT),
+	INSTR(INM),
+	INSTR(OUTM),
 #undef INSTR
 };
 
@@ -218,20 +297,60 @@ rl_asm(uint8_t *out_buf, size_t out_size, char *in_str)
 #define REGISTER(IDX) { OP_REGISTER, (IDX), 3 }
 #define PORT(IDX) { OP_PORT, (IDX), 3 }
 #define NUMBER(IDX,WIDTH) { OP_NUMBER, (IDX), (WIDTH) }
+#define RELATIVE(IDX,WIDTH) { OP_RELATIVE, (IDX), (WIDTH) }
 #define NONE { OP_NONE, 0, 0 }
-		{ RL_MOV, 0x0000, { REGISTER(5), REGISTER(8), NONE } },
-		{ RL_ADD, 0x0001, { REGISTER(5), REGISTER(8), REGISTER(11) } },
-		{ RL_SUB, 0x0002, { REGISTER(5), REGISTER(8), REGISTER(11) } },
+		{ RL_MOV,     0x0000, { REGISTER(5),  REGISTER(8),    NONE } },
+		{ RL_ADD,     0x0001, { REGISTER(5),  REGISTER(8),    REGISTER(11) } },
+		{ RL_SUB,     0x0002, { REGISTER(5),  REGISTER(8),    REGISTER(11) } },
+		{ RL_MUL,     0x0800, { REGISTER(5),  REGISTER(8),    REGISTER(11) } },
+		{ RL_DIV,     0x0801, { REGISTER(5),  REGISTER(8),    REGISTER(11) } },
+		{ RL_MOD,     0x0802, { REGISTER(5),  REGISTER(8),    REGISTER(11) } },
+		{ RL_AND,     0x1000, { REGISTER(5),  REGISTER(8),    REGISTER(11) } },
+		{ RL_OR,      0x1001, { REGISTER(5),  REGISTER(8),    REGISTER(11) } },
+		{ RL_NAND,    0x1800, { REGISTER(5),  REGISTER(8),    REGISTER(11) } },
+		{ RL_NOR,     0x1801, { REGISTER(5),  REGISTER(8),    REGISTER(11) } },
+		{ RL_XOR,     0x1802, { REGISTER(5),  REGISTER(8),    REGISTER(11) } },
+		{ RL_XNOR,    0x1803, { REGISTER(5),  REGISTER(8),    REGISTER(11) } },
+		{ RL_SHL,     0x2000, { REGISTER(5),  REGISTER(8),    NUMBER(12,4) } },
+		{ RL_SHR,     0x2010, { REGISTER(5),  REGISTER(8),    NUMBER(12,4) } },
+		{ RL_BSH,     0x2800, { REGISTER(5),  REGISTER(8),    REGISTER(11) } },
+		{ RL_ABSH,    0x2801, { REGISTER(5),  REGISTER(8),    REGISTER(11) } },
+		{ RL_XCH,     0x3000, { REGISTER(8),  REGISTER(11),   NONE } },
+		{ RL_TST,     0x3800, { REGISTER(8),  NONE,           NONE } },
+		{ RL_CMP,     0x3801, { REGISTER(8),  REGISTER(11),   NONE } },
+		{ RL_IMM,     0x8000, { REGISTER(4),  NUMBER(7,9),    NONE } },
+		{ RL_IMMS,    0x9000, { REGISTER(4),  NUMBER(7,9),    NONE } },
+		{ RL_LOADBR,  0xF000, { REGISTER(8),  REGISTER(11),   NONE } },
+		{ RL_LOADBI,  0xA000, { REGISTER(4),  NUMBER(7,9),    NONE } },
+		{ RL_LOADSR,  0xF200, { REGISTER(8),  REGISTER(11),   NONE } },
+		{ RL_LOADSI,  0xB000, { REGISTER(4),  NUMBER(7,9),    NONE } },
+		{ RL_LOADWR,  0xF400, { REGISTER(8),  REGISTER(11),   NONE } },
+		{ RL_LOADWI,  0xC000, { REGISTER(4),  NUMBER(7,9),    NONE } },
+		{ RL_STOREBR, 0xF600, { REGISTER(8),  REGISTER(11),   NONE } },
+		{ RL_STOREBI, 0xD000, { REGISTER(4),  NUMBER(7,9),    NONE } },
+		{ RL_STOREWR, 0xF800, { REGISTER(8),  REGISTER(11),   NONE } },
+		{ RL_STOREWI, 0xE000, { REGISTER(4),  NUMBER(7,9),    NONE } },
+		{ RL_MXCH,    0xFA00, { REGISTER(8),  REGISTER(11),   NONE } },
+		/* TODO conditions */
+		{ RL_JEc,     0x5000, { NUMBER(5,4),  RELATIVE(10,6), NONE } },
+		{ RL_JENc,    0x5040, { NUMBER(5,4),  RELATIVE(10,6), NONE } },
+		{ RL_JAc,     0x5800, { NUMBER(5,4),  RELATIVE(10,6), NONE } },
+		{ RL_JANc,    0x5840, { NUMBER(5,4),  RELATIVE(10,6), NONE } },
+		{ RL_IN,      0x6000, { REGISTER(5),  PORT(8),        NONE } },
+		{ RL_OUT,     0x6800, { REGISTER(5),  PORT(8),        NONE } },
+		{ RL_INM,     0x7000, { REGISTER(5),  PORT(8),        NONE } },
+		{ RL_OUTM,    0x7800, { REGISTER(5),  PORT(8),        NONE } },
 #undef REGISTER
 #undef PORT
 #undef NUMBER
+#undef RELATIVE
 #undef NONE
 	};
 	struct instr_record { struct instr_shape shape; struct rl_asm_token operands[3]; };
 	struct instr_record *instr_records;
 	unsigned int num_instr_records, cap_instr_records;
 	unsigned int i, j;
-	uint16_t assembled_instr, instr_part;
+	uint16_t assembled_instr, instr_part, opcode_bitmask;
 
 	tokens = NULL;
 	num_tokens = cap_tokens = 0;
@@ -271,7 +390,7 @@ rl_asm(uint8_t *out_buf, size_t out_size, char *in_str)
 			}
 			switch(tokens[i+1].type) {
 			case RL_ASM_TK_COLON:
-				symbol_table[num_symbols++] = (struct symbol){ tokens[i].data.ident.begin, tokens[i].data.ident.length, 2 * num_instr_records };
+				symbol_table[num_symbols] = (struct symbol){ tokens[i].data.ident.begin, tokens[i].data.ident.length, 2 * num_instr_records };
 				i += 2;
 				break;
 			case RL_ASM_TK_EQU:
@@ -282,7 +401,7 @@ rl_asm(uint8_t *out_buf, size_t out_size, char *in_str)
 					snprintf(res.reason, sizeof(res.reason), "expected NUMBER after IDENT EQU");
 					return res;
 				}
-				symbol_table[num_symbols++] = (struct symbol){ tokens[i].data.ident.begin, tokens[i].data.ident.length, tokens[i+1].data.number };
+				symbol_table[num_symbols] = (struct symbol){ tokens[i].data.ident.begin, tokens[i].data.ident.length, tokens[i+1].data.number };
 				i += 3;
 				break;
 			default:
@@ -292,6 +411,17 @@ rl_asm(uint8_t *out_buf, size_t out_size, char *in_str)
 				snprintf(res.reason, sizeof(res.reason), "expected COLON or EQU after IDENT");
 				return res;
 			}
+			for(j = 0; j < num_symbols; ++j) {
+				if( symbol_table[j].length == symbol_table[num_symbols].length &&
+					strncmp(symbol_table[j].begin, symbol_table[num_symbols].begin, symbol_table[num_symbols].length) == 0 ) {
+					res.success = 0;
+					res.line = tokens[i].line;
+					res.column = tokens[i].column;
+					snprintf(res.reason, sizeof(res.reason), "symbol %.*s redefined", (int)symbol_table[j].length, symbol_table[j].begin);
+					return res;
+				}
+			}
+			++num_symbols;
 			break;
 		case RL_ASM_TK_MNEMONIC:
 			for(j = 0; j < sizeof(instruction_shapes)/sizeof(*instruction_shapes); ++j) {
@@ -382,7 +512,6 @@ rl_asm(uint8_t *out_buf, size_t out_size, char *in_str)
 						strncmp(instr_records[i].operands[IDX].data.ident.begin, \
 						symbol_table[j].begin, \
 						symbol_table[j].length) == 0 ) { \
-						instr_part = symbol_table[j].value; \
 						break; \
 					} \
 				} \
@@ -395,13 +524,17 @@ rl_asm(uint8_t *out_buf, size_t out_size, char *in_str)
 							instr_records[i].operands[IDX].data.ident.begin); \
 					return res; \
 				} \
+				instr_part = symbol_table[j].value; \
+				if(instr_records[i].shape.operands[IDX].type == OP_RELATIVE) instr_part -= 2 * (i + 1); \
 				break; \
 			case RL_ASM_TK_NUMBER: \
 				instr_part = instr_records[i].operands[IDX].data.number; \
 				break; \
 			default: exit(1); /* something went very wrong */ \
 			} \
-			if(instr_part & ~((1 << instr_records[i].shape.operands[IDX].bit_width) - 1)) { \
+			opcode_bitmask = ((1 << instr_records[i].shape.operands[IDX].bit_width) - 1); \
+			if( (instr_part & opcode_bitmask) != instr_part && \
+				(instr_part & ~opcode_bitmask) != ~opcode_bitmask ) { \
 				res.success = 0; \
 				res.line = 0; \
 				res.column = 0; \
@@ -435,6 +568,86 @@ next_tk(char **in_str, unsigned int *line, unsigned int *column)
 		{ "ADD",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_ADD},0,0} },
 		{ "sub",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_SUB},0,0} },
 		{ "SUB",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_SUB},0,0} },
+		{ "mul",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_MUL},0,0} },
+		{ "MUL",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_MUL},0,0} },
+		{ "div",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_DIV},0,0} },
+		{ "DIV",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_DIV},0,0} },
+		{ "mod",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_MOD},0,0} },
+		{ "MOD",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_MOD},0,0} },
+		{ "and",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_AND},0,0} },
+		{ "AND",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_AND},0,0} },
+		{ "or",        {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_OR},0,0} },
+		{ "OR",        {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_OR},0,0} },
+		{ "nand",      {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_NAND},0,0} },
+		{ "NAND",      {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_NAND},0,0} },
+		{ "nor",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_NOR},0,0} },
+		{ "NOR",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_NOR},0,0} },
+		{ "xor",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_XOR},0,0} },
+		{ "XOR",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_XOR},0,0} },
+		{ "xnor",      {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_XNOR},0,0} },
+		{ "XNOR",      {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_XNOR},0,0} },
+		{ "shl",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_SHL},0,0} },
+		{ "SHL",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_SHL},0,0} },
+		{ "shr",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_SHR},0,0} },
+		{ "SHR",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_SHR},0,0} },
+		{ "bsh",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_BSH},0,0} },
+		{ "BSH",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_BSH},0,0} },
+		{ "absh",      {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_ABSH},0,0} },
+		{ "ABSH",      {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_ABSH},0,0} },
+		{ "xch",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_XCH},0,0} },
+		{ "XCH",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_XCH},0,0} },
+		{ "tst",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_TST},0,0} },
+		{ "TST",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_TST},0,0} },
+		{ "cmp",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_CMP},0,0} },
+		{ "CMP",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_CMP},0,0} },
+		{ "imm",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_IMM},0,0} },
+		{ "IMM",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_IMM},0,0} },
+		{ "imms",      {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_IMMS},0,0} },
+		{ "IMMS",      {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_IMMS},0,0} },
+		{ "loadbr",    {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_LOADBR},0,0} },
+		{ "LOADBR",    {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_LOADBR},0,0} },
+		{ "loadbi",    {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_LOADBI},0,0} },
+		{ "LOADBI",    {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_LOADBI},0,0} },
+		{ "loadsr",    {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_LOADSR},0,0} },
+		{ "LOADSR",    {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_LOADSR},0,0} },
+		{ "loadsi",    {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_LOADSI},0,0} },
+		{ "LOADSI",    {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_LOADSI},0,0} },
+		{ "loadwr",    {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_LOADWR},0,0} },
+		{ "LOADWR",    {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_LOADWR},0,0} },
+		{ "loadwi",    {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_LOADWI},0,0} },
+		{ "LOADWI",    {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_LOADWI},0,0} },
+		{ "storebr",   {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_STOREBR},0,0} },
+		{ "STOREBR",   {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_STOREBR},0,0} },
+		{ "storebi",   {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_STOREBI},0,0} },
+		{ "STOREBI",   {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_STOREBI},0,0} },
+		{ "storewr",   {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_STOREWR},0,0} },
+		{ "STOREWR",   {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_STOREWR},0,0} },
+		{ "storewi",   {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_STOREWI},0,0} },
+		{ "STOREWI",   {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_STOREWI},0,0} },
+		{ "mxch",      {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_MXCH},0,0} },
+		{ "MXCH",      {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_MXCH},0,0} },
+		/* TODO JMP */
+		{ "jc",        {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_Jc},0,0} },
+		{ "JC",        {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_Jc},0,0} },
+		/* TODO JREL */
+		{ "jrelc",     {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_JRELc},0,0} },
+		{ "JRELC",     {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_JRELc},0,0} },
+		{ "jec",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_JEc},0,0} },
+		{ "JEC",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_JEc},0,0} },
+		{ "jenc",      {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_JENc},0,0} },
+		{ "JENC",      {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_JENc},0,0} },
+		{ "jac",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_JAc},0,0} },
+		{ "JAC",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_JAc},0,0} },
+		{ "janc",      {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_JANc},0,0} },
+		{ "JANC",      {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_JANc},0,0} },
+		{ "in",        {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_IN},0,0} },
+		{ "IN",        {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_IN},0,0} },
+		{ "out",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_OUT},0,0} },
+		{ "OUT",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_OUT},0,0} },
+		{ "inm",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_INM},0,0} },
+		{ "INM",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_INM},0,0} },
+		{ "outm",      {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_OUTM},0,0} },
+		{ "OUTM",      {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_OUTM},0,0} },
 		{ "r0",        {RL_ASM_TK_REG,{.reg=RL_REG_R0},0,0} },
 		{ "R0",        {RL_ASM_TK_REG,{.reg=RL_REG_R0},0,0} },
 		{ "r1",        {RL_ASM_TK_REG,{.reg=RL_REG_R1},0,0} },
@@ -475,6 +688,7 @@ next_tk(char **in_str, unsigned int *line, unsigned int *column)
 	uint16_t num;
 	unsigned int begin_col;
 	struct rl_asm_token tk;
+	char next_c;
 
 	while(**in_str == ' ' || **in_str == '\t' || **in_str == '\n') {
 		if(**in_str == '\n') {
@@ -489,6 +703,11 @@ next_tk(char **in_str, unsigned int *line, unsigned int *column)
 
 	for(i = 0; i < sizeof(tk_lookup)/sizeof(*tk_lookup); ++i) {
 		if(strncmp(*in_str, tk_lookup[i].str, strlen(tk_lookup[i].str)) == 0) {
+			next_c = (*in_str)[strlen(tk_lookup[i].str)];
+			if( (next_c >= 'a' && next_c <= 'z') ||
+				(next_c >= 'A' && next_c <= 'Z') ||
+				(next_c >= '0' && next_c <= '9') ||
+				next_c == '_' ) continue;
 			begin_col = *column;
 			*in_str += strlen(tk_lookup[i].str);
 			*column += strlen(tk_lookup[i].str);
@@ -821,7 +1040,7 @@ rl_reset(struct node *n)
 	cd->local_clock = 0;
 
 	memset(&rld->regs, 0, sizeof(rld->regs));
-	rld->last_port = RL_PORT_UP;
+	rld->last_port = 0;
 }
 
 static void
@@ -837,6 +1056,27 @@ rl_exec(struct node *n)
 
 	raw_instr = computer_load_word(cd, cd->pc);
 	di = decode(raw_instr);
+
+	if(rld->caps & CAP_PORT_OUT) {
+#define HANDLE_PORT(PORT, BIT) \
+	rld->regs[RL_REG_STATUS] &= ~(BIT); \
+	if(port_write_available(PORT)) rld->regs[RL_REG_STATUS] |= (BIT);
+		HANDLE_PORT(n->write_up, RL_STATUS_UP_OUT);
+		HANDLE_PORT(n->write_right, RL_STATUS_RIGHT_OUT);
+		HANDLE_PORT(n->write_down, RL_STATUS_DOWN_OUT);
+		HANDLE_PORT(n->write_left, RL_STATUS_LEFT_OUT);
+#undef HANDLE_PORT
+	}
+	if(rld->caps & CAP_PORT_IN) {
+#define HANDLE_PORT(PORT, BIT) \
+	rld->regs[RL_REG_STATUS] &= ~(BIT); \
+	if(port_read_available(PORT)) rld->regs[RL_REG_STATUS] |= (BIT);
+		HANDLE_PORT(n->read_up, RL_STATUS_UP_IN);
+		HANDLE_PORT(n->read_right, RL_STATUS_RIGHT_IN);
+		HANDLE_PORT(n->read_down, RL_STATUS_DOWN_IN);
+		HANDLE_PORT(n->read_left, RL_STATUS_LEFT_IN);
+#undef HANDLE_PORT
+	}
 
 	if(di.op != RL_ILLEGAL_INSTR && rld->caps & (1 << di.op)) {
 		if((unsigned int)di.op < sizeof(instruction_lut)/sizeof(*instruction_lut) && instruction_lut[di.op]) {
@@ -986,6 +1226,38 @@ raise_V(struct node *n, int flag)
 	}
 }
 
+static int
+evaluate_condition(struct node *n, enum rl_condition cond)
+{
+	struct computer_data *cd;
+	struct rl_data *rld;
+
+	cd = n->data;
+	rld = cd->data;
+
+	switch(cond) {
+	case RL_COND_ALWAYS:
+		return 1;
+	case RL_COND_ZERO:
+		return (rld->regs[RL_REG_STATUS] & RL_STATUS_Z) != 0;
+	case RL_COND_NEG:
+		return (rld->regs[RL_REG_STATUS] & RL_STATUS_N) != 0;
+	case RL_COND_CARRY:
+		return (rld->regs[RL_REG_STATUS] & RL_STATUS_C) != 0;
+	case RL_COND_NO_CARRY:
+		return (rld->regs[RL_REG_STATUS] & RL_STATUS_C) == 0;
+	case RL_COND_OVERFLOW:
+		return (rld->regs[RL_REG_STATUS] & RL_STATUS_V) != 0;
+	case RL_COND_NONZERO:
+		return (rld->regs[RL_REG_STATUS] & RL_STATUS_Z) == 0;
+	case RL_COND_POS:
+		return (rld->regs[RL_REG_STATUS] & (RL_STATUS_Z|RL_STATUS_N)) == 0;
+	default:
+		fprintf(stderr, "somehow a condition got corrupted?\n");
+		exit(1);
+	}
+}
+
 static void
 MOV(struct node *n, struct decoded_instr di)
 {
@@ -1029,5 +1301,755 @@ SUB(struct node *n, struct decoded_instr di)
 	raise_V(n, (((a ^ b) & (a ^ res)) & 0x8000) != 0);
 
 	advance_pc(n);
+}
+
+static void
+MUL(struct node *n, struct decoded_instr di)
+{
+	uint16_t res;
+
+	res = get_reg(n, di.data.reg_dab.a) * get_reg(n, di.data.reg_dab.b);
+
+	set_reg(n, di.data.reg_dab.destination, res);
+
+	raise_Z(n, res);
+	raise_N(n, res);
+
+	advance_pc(n);
+}
+
+static void
+DIV(struct node *n, struct decoded_instr di)
+{
+	uint16_t res, b;
+
+	b = get_reg(n, di.data.reg_dab.b);
+	if(b != 0) {
+		res = (int16_t)get_reg(n, di.data.reg_dab.a) / (int16_t)b;
+	} else {
+		res = 0;
+	}
+
+	set_reg(n, di.data.reg_dab.destination, res);
+
+	raise_Z(n, res);
+	raise_N(n, res);
+
+	advance_pc(n);
+}
+
+static void
+MOD(struct node *n, struct decoded_instr di)
+{
+	uint16_t res, b;
+
+	b = get_reg(n, di.data.reg_dab.b);
+	if(b != 0) {
+		res = (int16_t)get_reg(n, di.data.reg_dab.a) % (int16_t)b;
+	} else {
+		res = 0;
+	}
+
+	set_reg(n, di.data.reg_dab.destination, res);
+
+	raise_Z(n, res);
+
+	advance_pc(n);
+}
+
+static void
+AND(struct node *n, struct decoded_instr di)
+{
+	uint16_t res;
+
+	res = get_reg(n, di.data.reg_dab.a) & get_reg(n, di.data.reg_dab.b);
+
+	set_reg(n, di.data.reg_dab.destination, res);
+
+	raise_Z(n, res);
+	raise_N(n, res);
+
+	advance_pc(n);
+}
+
+static void
+OR(struct node *n, struct decoded_instr di)
+{
+	uint16_t res;
+
+	res = get_reg(n, di.data.reg_dab.a) | get_reg(n, di.data.reg_dab.b);
+
+	set_reg(n, di.data.reg_dab.destination, res);
+
+	raise_Z(n, res);
+	raise_N(n, res);
+
+	advance_pc(n);
+}
+
+static void
+NAND(struct node *n, struct decoded_instr di)
+{
+	uint16_t res;
+
+	res = ~(get_reg(n, di.data.reg_dab.a) & get_reg(n, di.data.reg_dab.b));
+
+	set_reg(n, di.data.reg_dab.destination, res);
+
+	raise_Z(n, res);
+	raise_N(n, res);
+
+	advance_pc(n);
+}
+
+static void
+NOR(struct node *n, struct decoded_instr di)
+{
+	uint16_t res;
+
+	res = ~(get_reg(n, di.data.reg_dab.a) | get_reg(n, di.data.reg_dab.b));
+
+	set_reg(n, di.data.reg_dab.destination, res);
+
+	raise_Z(n, res);
+	raise_N(n, res);
+
+	advance_pc(n);
+}
+
+static void
+XOR(struct node *n, struct decoded_instr di)
+{
+	uint16_t res;
+
+	res = get_reg(n, di.data.reg_dab.a) ^ get_reg(n, di.data.reg_dab.b);
+
+	set_reg(n, di.data.reg_dab.destination, res);
+
+	raise_Z(n, res);
+	raise_N(n, res);
+
+	advance_pc(n);
+}
+
+static void
+XNOR(struct node *n, struct decoded_instr di)
+{
+	uint16_t res;
+
+	res = ~(get_reg(n, di.data.reg_dab.a) ^ get_reg(n, di.data.reg_dab.b));
+
+	set_reg(n, di.data.reg_dab.destination, res);
+
+	raise_Z(n, res);
+	raise_N(n, res);
+
+	advance_pc(n);
+}
+
+static void
+SHL(struct node *n, struct decoded_instr di)
+{
+	uint16_t res, src;
+
+	src = get_reg(n, di.data.reg_dsn.source);
+	res = src << di.data.reg_dsn.n;
+
+	set_reg(n, di.data.reg_dsn.destination, res);
+
+	raise_Z(n, res);
+	raise_N(n, res);
+	if(di.data.reg_dsn.n > 0) {
+		raise_C(n, (src >> (16-di.data.reg_dsn.n)) & 1);
+	} else {
+		raise_C(n, 0);
+	}
+
+	advance_pc(n);
+}
+
+static void
+SHR(struct node *n, struct decoded_instr di)
+{
+	uint16_t res, src;
+
+	src = get_reg(n, di.data.reg_dsn.source);
+	res = src >> di.data.reg_dsn.n;
+
+	set_reg(n, di.data.reg_dsn.destination, res);
+
+	raise_Z(n, res);
+	raise_N(n, res);
+	if(di.data.reg_dsn.n > 0) {
+		raise_C(n, (src >> (di.data.reg_dsn.n-1)) & 1);
+	} else {
+		raise_C(n, 0);
+	}
+
+	advance_pc(n);
+}
+
+static void
+BSH(struct node *n, struct decoded_instr di)
+{
+	uint16_t res, a, b;
+
+	a = get_reg(n, di.data.reg_dab.a);
+	b = get_reg(n, di.data.reg_dab.b);
+	if((b & 0x8000) == 0) {
+		res = a >> (b & 0x000F);
+		if(di.data.reg_dsn.n > 0) {
+			raise_C(n, (a >> (b-1)) & 1);
+		} else {
+			raise_C(n, 0);
+		}
+	} else {
+		res = a << ((-b) & 0x000F);
+		if(b > 0) {
+			raise_C(n, (a >> (16-b)) & 1);
+		} else {
+			raise_C(n, 0);
+		}
+	}
+
+	set_reg(n, di.data.reg_dab.destination, res);
+
+	raise_Z(n, res);
+	raise_N(n, res);
+
+	advance_pc(n);
+}
+
+static void
+ABSH(struct node *n, struct decoded_instr di)
+{
+	uint16_t res, a, b;
+
+	a = get_reg(n, di.data.reg_dab.a);
+	b = get_reg(n, di.data.reg_dab.b);
+	if((b & 0x8000) == 0) {
+		res = a >> (b & 0x000F);
+		if(a & 0x8000) {
+			res |= (0xFFFF << (16 - (b & 0x000F))) & 0xFFFF;
+		}
+		if(di.data.reg_dsn.n > 0) {
+			raise_C(n, (a >> (b-1)) & 1);
+		} else {
+			raise_C(n, 0);
+		}
+	} else {
+		res = a << ((-b) & 0x000F);
+		if(b > 0) {
+			raise_C(n, (a >> (16-b)) & 1);
+		} else {
+			raise_C(n, 0);
+		}
+	}
+
+	set_reg(n, di.data.reg_dab.destination, res);
+
+	raise_Z(n, res);
+	raise_N(n, res);
+
+	advance_pc(n);
+}
+
+static void
+XCH(struct node *n, struct decoded_instr di)
+{
+	uint16_t a, b;
+
+	a = get_reg(n, di.data.reg_ab.a);
+	b = get_reg(n, di.data.reg_ab.b);
+
+	set_reg(n, di.data.reg_ab.a, b);
+	set_reg(n, di.data.reg_ab.b, a);
+
+	advance_pc(n);
+}
+
+static void
+TST(struct node *n, struct decoded_instr di)
+{
+	uint16_t r;
+
+	r = get_reg(n, di.data.reg_r.reg);
+
+	raise_Z(n, r);
+	raise_N(n, r);
+
+	advance_pc(n);
+}
+
+static void
+CMP(struct node *n, struct decoded_instr di)
+{
+	uint16_t sub;
+
+	sub = get_reg(n, di.data.reg_ab.a) - get_reg(n, di.data.reg_ab.b);
+
+	raise_Z(n, sub);
+	raise_N(n, sub);
+
+	advance_pc(n);
+}
+
+static void
+IMM(struct node *n, struct decoded_instr di)
+{
+	set_reg(n, di.data.im_di.destination, di.data.im_di.imm);
+
+	advance_pc(n);
+}
+
+static void
+IMMS(struct node *n, struct decoded_instr di)
+{
+	uint16_t imm; /* ironically */
+
+	imm = di.data.im_di.imm;
+	if(imm & 0x0100) {
+		imm |= 0xFE00;
+	}
+	set_reg(n, di.data.im_di.destination, imm);
+
+	advance_pc(n);
+}
+
+static void
+LOADBR(struct node *n, struct decoded_instr di)
+{
+	uint16_t val;
+
+	val = computer_load_byte(n->data, get_reg(n, di.data.im_ds.source));
+	set_reg(n, di.data.im_ds.destination, val);
+
+	advance_pc(n);
+}
+
+static void
+LOADBI(struct node *n, struct decoded_instr di)
+{
+	uint16_t val;
+
+	val = computer_load_byte(n->data, di.data.im_da.addr);
+	set_reg(n, di.data.im_da.destination, val);
+
+	advance_pc(n);
+}
+
+static void
+LOADSR(struct node *n, struct decoded_instr di)
+{
+	uint16_t val;
+
+	val = computer_load_byte(n->data, get_reg(n, di.data.im_ds.source));
+	if(val & 0x0080) {
+		val |= 0xFF00;
+	}
+	set_reg(n, di.data.im_ds.destination, val);
+
+	advance_pc(n);
+}
+
+static void
+LOADSI(struct node *n, struct decoded_instr di)
+{
+	uint16_t val;
+
+	val = computer_load_byte(n->data, di.data.im_da.addr);
+	if(val & 0x0080) {
+		val |= 0xFF00;
+	}
+	set_reg(n, di.data.im_da.destination, val);
+
+	advance_pc(n);
+}
+
+static void
+LOADWR(struct node *n, struct decoded_instr di)
+{
+	uint16_t val;
+
+	val = computer_load_word(n->data, get_reg(n, di.data.im_ds.source));
+	set_reg(n, di.data.im_ds.destination, val);
+
+	advance_pc(n);
+}
+
+static void
+LOADWI(struct node *n, struct decoded_instr di)
+{
+	uint16_t val;
+
+	val = computer_load_word(n->data, di.data.im_da.addr);
+	set_reg(n, di.data.im_da.destination, val);
+
+	advance_pc(n);
+}
+
+static void
+STOREBR(struct node *n, struct decoded_instr di)
+{
+	uint16_t val;
+
+	val = get_reg(n, di.data.im_ds.source);
+	computer_store_byte(n->data, get_reg(n, di.data.im_ds.destination), val);
+
+	advance_pc(n);
+}
+
+static void
+STOREBI(struct node *n, struct decoded_instr di)
+{
+	uint16_t val;
+
+	val = get_reg(n, di.data.im_sa.source);
+	computer_store_byte(n->data, di.data.im_sa.addr, val);
+
+	advance_pc(n);
+}
+
+static void
+STOREWR(struct node *n, struct decoded_instr di)
+{
+	uint16_t val;
+
+	val = get_reg(n, di.data.im_ds.source);
+	computer_store_word(n->data, get_reg(n, di.data.im_ds.destination), val);
+
+	advance_pc(n);
+}
+
+static void
+STOREWI(struct node *n, struct decoded_instr di)
+{
+	uint16_t val;
+
+	val = get_reg(n, di.data.im_sa.source);
+	computer_store_word(n->data, di.data.im_sa.addr, val);
+
+	advance_pc(n);
+}
+
+static void
+MXCH(struct node *n, struct decoded_instr di)
+{
+	uint8_t a, b;
+
+	a = computer_load_byte(n->data, get_reg(n, di.data.im_ab.a));
+	b = computer_load_byte(n->data, get_reg(n, di.data.im_ab.b));
+	
+	computer_store_byte(n->data, get_reg(n, di.data.im_ab.b), a);
+	computer_store_byte(n->data, get_reg(n, di.data.im_ab.a), b);
+
+	advance_pc(n);
+}
+
+static void
+Jc(struct node *n, struct decoded_instr di)
+{
+	struct computer_data *cd;
+
+	cd = n->data;
+
+	advance_pc(n);
+
+	if(evaluate_condition(n, di.data.j_cr.cond)) {
+		cd->pc += di.data.j_cr.relative;
+		cd->pc %= cd->mem_sz;
+	}
+}
+
+static void
+JRELc(struct node *n, struct decoded_instr di)
+{
+	struct computer_data *cd;
+
+	cd = n->data;
+
+	if(evaluate_condition(n, di.data.j_cob.cond)) {
+		cd->pc = di.data.j_cob.base + get_reg(n, di.data.j_cob.offset);
+		cd->pc %= cd->mem_sz;
+	} else {
+		advance_pc(n);
+	}
+}
+
+static void
+JEc(struct node *n, struct decoded_instr di)
+{
+	struct computer_data *cd;
+	struct rl_data *rld;
+
+	cd = n->data;
+	rld = cd->data;
+
+	advance_pc(n);
+	if( (rld->regs[RL_REG_STATUS] & di.data.j_mr.mask) != 0 ) {
+		cd->pc += di.data.j_mr.relative;
+		cd->pc %= cd->mem_sz;
+	}
+}
+
+static void
+JENc(struct node *n, struct decoded_instr di)
+{
+	struct computer_data *cd;
+	struct rl_data *rld;
+
+	cd = n->data;
+	rld = cd->data;
+
+	advance_pc(n);
+	if( (rld->regs[RL_REG_STATUS] & di.data.j_mr.mask) == 0 ) {
+		cd->pc += di.data.j_mr.relative;
+		cd->pc %= cd->mem_sz;
+	}
+}
+
+static void
+JAc(struct node *n, struct decoded_instr di)
+{
+	struct computer_data *cd;
+	struct rl_data *rld;
+
+	cd = n->data;
+	rld = cd->data;
+
+	advance_pc(n);
+	if( (rld->regs[RL_REG_STATUS] & di.data.j_mr.mask) == di.data.j_mr.mask ) {
+		cd->pc += di.data.j_mr.relative;
+		cd->pc %= cd->mem_sz;
+	}
+}
+
+static void
+JANc(struct node *n, struct decoded_instr di)
+{
+	struct computer_data *cd;
+	struct rl_data *rld;
+
+	cd = n->data;
+	rld = cd->data;
+
+	advance_pc(n);
+	if( (rld->regs[RL_REG_STATUS] & di.data.j_mr.mask) != di.data.j_mr.mask ) {
+		cd->pc += di.data.j_mr.relative;
+		cd->pc %= cd->mem_sz;
+	}
+}
+
+static void
+IN(struct node *n, struct decoded_instr di)
+{
+	struct port *p;
+	struct computer_data *cd;
+	struct rl_data *rld;
+
+	cd = n->data;
+	rld = cd->data;
+
+	p = NULL;
+	switch(di.data.io_dp.port) {
+	case RL_PORT_UP: p = n->read_up; break;
+	case RL_PORT_RIGHT: p = n->read_right; break;
+	case RL_PORT_DOWN: p = n->read_down; break;
+	case RL_PORT_LEFT: p = n->read_left; break;
+	case RL_PORT_ANY:
+		if(port_read_available(n->read_up))    { rld->last_port = 0; p = n->read_up; break; }
+		if(port_read_available(n->read_right)) { rld->last_port = 1; p = n->read_right; break; }
+		if(port_read_available(n->read_down))  { rld->last_port = 2; p = n->read_down; break; }
+		if(port_read_available(n->read_left))  { rld->last_port = 3; p = n->read_left; break; }
+		break;
+	case RL_PORT_LAST:
+		switch(rld->last_port) {
+		case 0: p = n->read_up; break;
+		case 1: p = n->read_right; break;
+		case 2: p = n->read_down; break;
+		case 3: p = n->read_left; break;
+		}
+		break;
+	case RL_PORT_OPPOSITE:
+		switch(rld->last_port) {
+		case 0: p = n->read_down; break;
+		case 1: p = n->read_left; break;
+		case 2: p = n->read_up; break;
+		case 3: p = n->read_right; break;
+		}
+		break;
+	case RL_PORT_CLOCKWISE:
+		switch(rld->last_port) {
+		case 0: p = n->read_right; break;
+		case 1: p = n->read_down; break;
+		case 2: p = n->read_left; break;
+		case 3: p = n->read_up; break;
+		}
+		break;
+	}
+
+	if(port_read_available(p)) {
+		set_reg(n, di.data.io_dp.destination, port_read(p));
+		advance_pc(n);
+	} else {
+		/* don't advance the PC -> same instruction executed next time */
+	}
+}
+
+static void
+OUT(struct node *n, struct decoded_instr di)
+{
+	struct port *p;
+	struct computer_data *cd;
+	struct rl_data *rld;
+
+	cd = n->data;
+	rld = cd->data;
+
+	p = NULL;
+	switch(di.data.io_sp.port) {
+	case RL_PORT_UP: p = n->write_up; break;
+	case RL_PORT_RIGHT: p = n->write_right; break;
+	case RL_PORT_DOWN: p = n->write_down; break;
+	case RL_PORT_LEFT: p = n->write_left; break;
+	case RL_PORT_ANY:
+	case RL_PORT_LAST:
+		switch(rld->last_port) {
+		case 0: p = n->write_up; break;
+		case 1: p = n->write_right; break;
+		case 2: p = n->write_down; break;
+		case 3: p = n->write_left; break;
+		}
+		break;
+	case RL_PORT_OPPOSITE:
+		switch(rld->last_port) {
+		case 0: p = n->write_down; break;
+		case 1: p = n->write_left; break;
+		case 2: p = n->write_up; break;
+		case 3: p = n->write_right; break;
+		}
+		break;
+	case RL_PORT_CLOCKWISE:
+		switch(rld->last_port) {
+		case 0: p = n->write_right; break;
+		case 1: p = n->write_down; break;
+		case 2: p = n->write_left; break;
+		case 3: p = n->write_up; break;
+		}
+		break;
+	}
+
+	if(port_write_available(p)) {
+		port_write(p, get_reg(n, di.data.io_sp.source));
+		advance_pc(n);
+	} else {
+		/* don't advance the PC -> same instruction executed next time */
+	}
+}
+
+static void
+INM(struct node *n, struct decoded_instr di)
+{
+	struct port *p;
+	struct computer_data *cd;
+	struct rl_data *rld;
+
+	cd = n->data;
+	rld = cd->data;
+
+	p = NULL;
+	switch(di.data.io_dp.port) {
+	case RL_PORT_UP: p = n->read_up; break;
+	case RL_PORT_RIGHT: p = n->read_right; break;
+	case RL_PORT_DOWN: p = n->read_down; break;
+	case RL_PORT_LEFT: p = n->read_left; break;
+	case RL_PORT_ANY:
+		if(port_read_available(n->read_up))    { rld->last_port = 0; p = n->read_up; break; }
+		if(port_read_available(n->read_right)) { rld->last_port = 1; p = n->read_right; break; }
+		if(port_read_available(n->read_down))  { rld->last_port = 2; p = n->read_down; break; }
+		if(port_read_available(n->read_left))  { rld->last_port = 3; p = n->read_left; break; }
+		break;
+	case RL_PORT_LAST:
+		switch(rld->last_port) {
+		case 0: p = n->read_up; break;
+		case 1: p = n->read_right; break;
+		case 2: p = n->read_down; break;
+		case 3: p = n->read_left; break;
+		}
+		break;
+	case RL_PORT_OPPOSITE:
+		switch(rld->last_port) {
+		case 0: p = n->read_down; break;
+		case 1: p = n->read_left; break;
+		case 2: p = n->read_up; break;
+		case 3: p = n->read_right; break;
+		}
+		break;
+	case RL_PORT_CLOCKWISE:
+		switch(rld->last_port) {
+		case 0: p = n->read_right; break;
+		case 1: p = n->read_down; break;
+		case 2: p = n->read_left; break;
+		case 3: p = n->read_up; break;
+		}
+		break;
+	}
+
+	if(port_read_available(p)) {
+		computer_store_word(cd, get_reg(n, di.data.io_dp.destination), port_read(p));
+		advance_pc(n);
+	} else {
+		/* don't advance the PC -> same instruction executed next time */
+	}
+}
+
+static void
+OUTM(struct node *n, struct decoded_instr di)
+{
+	struct port *p;
+	struct computer_data *cd;
+	struct rl_data *rld;
+
+	cd = n->data;
+	rld = cd->data;
+
+	switch(di.data.io_sp.port) {
+	case RL_PORT_UP: p = n->write_up; break;
+	case RL_PORT_RIGHT: p = n->write_right; break;
+	case RL_PORT_DOWN: p = n->write_down; break;
+	case RL_PORT_LEFT: p = n->write_left; break;
+	case RL_PORT_ANY:
+	case RL_PORT_LAST:
+		switch(rld->last_port) {
+		case 0: p = n->write_up; break;
+		case 1: p = n->write_right; break;
+		case 2: p = n->write_down; break;
+		case 3: p = n->write_left; break;
+		}
+		break;
+	case RL_PORT_OPPOSITE:
+		switch(rld->last_port) {
+		case 0: p = n->write_down; break;
+		case 1: p = n->write_left; break;
+		case 2: p = n->write_up; break;
+		case 3: p = n->write_right; break;
+		}
+		break;
+	case RL_PORT_CLOCKWISE:
+		switch(rld->last_port) {
+		case 0: p = n->write_right; break;
+		case 1: p = n->write_down; break;
+		case 2: p = n->write_left; break;
+		case 3: p = n->write_up; break;
+		}
+		break;
+	}
+
+	if(port_write_available(p)) {
+		port_write(p, computer_load_word(cd, get_reg(n, di.data.io_sp.source)));
+		advance_pc(n);
+	} else {
+		/* don't advance the PC -> same instruction executed next time */
+	}
 }
 

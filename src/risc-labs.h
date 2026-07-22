@@ -101,7 +101,7 @@ typedef uint64_t rl_capabilities;
 struct rl_data {
 	rl_capabilities caps;
 	uint16_t regs[7]; /* plus the ZERO register */
-	uint8_t last_port : 3;
+	uint8_t last_port : 2;
 };
 
 struct node create_rl_computer(unsigned int points);

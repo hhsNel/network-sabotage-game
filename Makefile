@@ -11,7 +11,7 @@ TEST_SRCS := $(wildcard $(TESTDIR)/*.c)
 TEST_BINS := $(TEST_SRCS:$(TESTDIR)/%.c=$(HARNESSDIR)/%)
 TGT := network-sabotage
 
-CFLAGS := -std=c99 -Wall -Wextra -Wpedantic -I$(SRCDIR) -g
+CFLAGS := -std=c99 -Wall -Wextra -Wpedantic -Werror -I$(SRCDIR) -g
 LDFLAGS := -g
 
 .PHONY: all clean check
