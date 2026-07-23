@@ -34,8 +34,8 @@ proc expect_ok {cmd pattern desc} {
 	}
 }
 
-proc do_reset {} { expect_ok "reset" {OK} "reset" }
-proc do_exec  {} { expect_ok "exec"  {OK} "exec" }
+proc do_reset {} { send "reset\r"; expect "OK\r" }
+proc do_exec  {} { send "exec\r";  expect "OK\r" }
 
 proc get_pc {} {
 	send "pc\r"
@@ -121,6 +121,1283 @@ store_byte 8 42
 assert_eq [load_byte 8] 42 "store_b/load_b roundtrip"
 do_exec
 assert_eq [get_pc] 2 "pc advances after one exec"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 0x101
+	MOV r0 r1
+}] "OK" "assemble MOV test"
+assert_eq [dump 2 2] "00 20" "MOV assembled correctly"
+do_exec
+do_exec
+assert_eq [get_pc] 4 "pc advanced"
+assert_eq [get_regs] "0101 0101 0000 0000 0000 0000 0000" "MOV executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 1
+	IMM r2 3
+	ADD r0 r1 r2
+}] "OK" "assemble ADD test"
+assert_eq [dump 4 2] "00 29" "ADD assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "0004 0001 0003 0000 0000 0000 0000" "ADD executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 1
+	IMMS r2 0x1ff
+	ADD r0 r1 r2
+}] "OK" "assemble ADD test 2"
+assert_eq [dump 4 2] "00 29" "ADD 2 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "0000 0001 ffff 0000 0000 0000 0005" "ADD 2 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 1
+	IMMS r2 0x1fe
+	ADD r0 r1 r2
+}] "OK" "assemble ADD test 3"
+assert_eq [dump 4 2] "00 29" "ADD 3 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "ffff 0001 fffe 0000 0000 0000 0002" "ADD 3 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 1
+	IMMS r2 0x1ff
+	SHR r2 r2 1
+	ADD r0 r1 r2
+}] "OK" "assemble ADD test 4"
+assert_eq [dump 6 2] "00 29" "ADD 4 assembled correctly"
+do_exec
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 8 "pc advanced"
+assert_eq [get_regs] "8000 0001 7fff 0000 0000 0000 000a" "ADD 4 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 2
+	IMM r2 1
+	SUB r0 r1 r2
+}] "OK" "assemble SUB test"
+assert_eq [dump 4 2] "00 2a" "SUB assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "0001 0002 0001 0000 0000 0000 0000" "SUB executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 1
+	IMM r2 1
+	SUB r0 r1 r2
+}] "OK" "assemble SUB test 2"
+assert_eq [dump 4 2] "00 2a" "SUB 2 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "0000 0001 0001 0000 0000 0000 0001" "SUB 2 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 1
+	IMM r2 2
+	SUB r0 r1 r2
+}] "OK" "assemble SUB test 3"
+assert_eq [dump 4 2] "00 2a" "SUB 3 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "ffff 0001 0002 0000 0000 0000 0006" "SUB 3 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 0x100
+	SHL r1 r1 7
+	IMM r2 1
+	SUB r0 r1 r2
+}] "OK" "assemble SUB test 4"
+assert_eq [dump 6 2] "00 2a" "SUB 4 assembled correctly"
+do_exec
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 8 "pc advanced"
+assert_eq [get_regs] "7fff 8000 0001 0000 0000 0000 0008" "SUB 4 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 2
+	IMM r2 8
+	MUL r0 r1 r2
+}] "OK" "assemble MUL test"
+assert_eq [dump 4 2] "08 28" "MUL assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "0010 0002 0008 0000 0000 0000 0000" "MUL executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 0
+	IMM r2 8
+	MUL r0 r1 r2
+}] "OK" "assemble MUL test 2"
+assert_eq [dump 4 2] "08 28" "MUL 2 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "0000 0000 0008 0000 0000 0000 0001" "MUL 2 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 0x100
+	IMM r2 0x80
+	MUL r0 r1 r2
+}] "OK" "assemble MUL test 3"
+assert_eq [dump 4 2] "08 28" "MUL 3 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "8000 0100 0080 0000 0000 0000 0002" "MUL 3 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 23
+	IMM r2 8
+	DIV r0 r1 r2
+}] "OK" "assemble DIV test"
+assert_eq [dump 4 2] "08 29" "DIV assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "0002 0017 0008 0000 0000 0000 0000" "DIV executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 0
+	IMM r2 8
+	DIV r0 r1 r2
+}] "OK" "assemble DIV test 2"
+assert_eq [dump 4 2] "08 29" "DIV 2 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "0000 0000 0008 0000 0000 0000 0001" "DIV 2 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 23
+	IMM r2 0
+	DIV r0 r1 r2
+}] "OK" "assemble DIV test 3"
+assert_eq [dump 4 2] "08 29" "DIV 3 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "0000 0017 0000 0000 0000 0000 0001" "DIV 3 executed"
+
+do_reset
+assert_eq [assemble {
+	IMMS r1 0x1fe
+	IMM r2 2
+	DIV r0 r1 r2
+}] "OK" "assemble DIV test 4"
+assert_eq [dump 4 2] "08 29" "DIV 4 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "ffff fffe 0002 0000 0000 0000 0002" "DIV 4 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 23
+	IMM r2 8
+	MOD r0 r1 r2
+}] "OK" "assemble MOD test"
+assert_eq [dump 4 2] "08 2a" "MOD assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "0007 0017 0008 0000 0000 0000 0000" "MOD executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 24
+	IMM r2 8
+	MOD r0 r1 r2
+}] "OK" "assemble MOD test 2"
+assert_eq [dump 4 2] "08 2a" "MOD 2 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "0000 0018 0008 0000 0000 0000 0001" "MOD 2 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 23
+	IMM r2 0
+	MOD r0 r1 r2
+}] "OK" "assemble MOD test 3"
+assert_eq [dump 4 2] "08 2a" "MOD 3 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "0000 0017 0000 0000 0000 0000 0001" "MOD 3 executed"
+
+do_reset
+assert_eq [assemble {
+	IMMS r1 0x1f7
+	IMM r2 8
+	MOD r0 r1 r2
+}] "OK" "assemble MOD test 4"
+assert_eq [dump 4 2] "08 2a" "MOD 4 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "ffff fff7 0008 0000 0000 0000 0002" "MOD 4 executed"
+
+do_reset
+assert_eq [assemble {
+	IMMS r1 0x155
+	IMM r2 0x0ab
+	AND r0 r1 r2
+}] "OK" "assemble AND test"
+assert_eq [dump 4 2] "10 28" "AND assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "0001 ff55 00ab 0000 0000 0000 0000" "AND executed"
+
+do_reset
+assert_eq [assemble {
+	IMMS r1 0x155
+	IMM r2 0x0aa
+	AND r0 r1 r2
+}] "OK" "assemble AND test 2"
+assert_eq [dump 4 2] "10 28" "AND 2 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "0000 ff55 00aa 0000 0000 0000 0001" "AND 2 executed"
+
+do_reset
+assert_eq [assemble {
+	IMMS r1 0x1ff
+	IMMS r2 0x100
+	AND r0 r1 r2
+}] "OK" "assemble AND test 3"
+assert_eq [dump 4 2] "10 28" "AND 3 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "ff00 ffff ff00 0000 0000 0000 0002" "AND 3 executed"
+
+do_reset
+assert_eq [assemble {
+	IMMS r1 0x155
+	IMM r2 0x0aa
+	OR r0 r1 r2
+}] "OK" "assemble OR test"
+assert_eq [dump 4 2] "10 29" "OR assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "ffff ff55 00aa 0000 0000 0000 0002" "OR executed"
+
+do_reset
+assert_eq [assemble {
+	IMMS r1 0x154
+	IMM r2 0x0aa
+	OR r0 r1 r2
+}] "OK" "assemble OR test 2"
+assert_eq [dump 4 2] "10 29" "OR 2 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "fffe ff54 00aa 0000 0000 0000 0002" "OR 2 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 0
+	IMM r2 0
+	OR r0 r1 r2
+}] "OK" "assemble OR test 3"
+assert_eq [dump 4 2] "10 29" "OR 3 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "0000 0000 0000 0000 0000 0000 0001" "OR 3 executed"
+
+do_reset
+assert_eq [assemble {
+	IMMS r1 0x155
+	IMM r2 0x0ab
+	NAND r0 r1 r2
+}] "OK" "assemble NAND test"
+assert_eq [dump 4 2] "18 28" "NAND assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "fffe ff55 00ab 0000 0000 0000 0002" "NAND executed"
+
+do_reset
+assert_eq [assemble {
+	IMMS r1 0x155
+	IMM r2 0x0aa
+	NAND r0 r1 r2
+}] "OK" "assemble NAND test 2"
+assert_eq [dump 4 2] "18 28" "NAND 2 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "ffff ff55 00aa 0000 0000 0000 0002" "NAND 2 executed"
+
+do_reset
+assert_eq [assemble {
+	IMMS r1 0x155
+	IMMS r2 0x1aa
+	NAND r0 r1 r2
+}] "OK" "assemble NAND test 3"
+assert_eq [dump 4 2] "18 28" "NAND 3 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "00ff ff55 ffaa 0000 0000 0000 0000" "NAND 3 executed"
+
+do_reset
+assert_eq [assemble {
+	IMMS r1 0x1ff
+	IMMS r2 0x1ff
+	NAND r0 r1 r2
+}] "OK" "assemble NAND test 4"
+assert_eq [dump 4 2] "18 28" "NAND 4 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "0000 ffff ffff 0000 0000 0000 0001" "NAND 4 executed"
+
+do_reset
+assert_eq [assemble {
+	IMMS r1 0x155
+	IMM r2 0x0aa
+	NOR r0 r1 r2
+}] "OK" "assemble NOR test"
+assert_eq [dump 4 2] "18 29" "NOR assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "0000 ff55 00aa 0000 0000 0000 0001" "NOR executed"
+
+do_reset
+assert_eq [assemble {
+	IMMS r1 0x154
+	IMM r2 0x0aa
+	NOR r0 r1 r2
+}] "OK" "assemble NOR test 2"
+assert_eq [dump 4 2] "18 29" "NOR 2 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "0001 ff54 00aa 0000 0000 0000 0000" "NOR 2 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 0
+	IMM r2 0
+	NOR r0 r1 r2
+}] "OK" "assemble NOR test 3"
+assert_eq [dump 4 2] "18 29" "NOR 3 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "ffff 0000 0000 0000 0000 0000 0002" "NOR 3 executed"
+
+do_reset
+assert_eq [assemble {
+	IMMS r1 0x155
+	IMM r2 0x0aa
+	XOR r0 r1 r2
+}] "OK" "assemble XOR test"
+assert_eq [dump 4 2] "18 2a" "XOR assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "ffff ff55 00aa 0000 0000 0000 0002" "XOR executed"
+
+do_reset
+assert_eq [assemble {
+	IMMS r1 0x10f
+	IMMS r2 0x10f
+	XOR r0 r1 r2
+}] "OK" "assemble XOR test 2"
+assert_eq [dump 4 2] "18 2a" "XOR 2 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "0000 ff0f ff0f 0000 0000 0000 0001" "XOR 2 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 0x0ff
+	IMM r2 0x040
+	XOR r0 r1 r2
+}] "OK" "assemble XOR test 3"
+assert_eq [dump 4 2] "18 2a" "XOR 3 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "00bf 00ff 0040 0000 0000 0000 0000" "XOR 3 executed"
+
+do_reset
+assert_eq [assemble {
+	IMMS r1 0x155
+	IMM r2 0x0aa
+	XNOR r0 r1 r2
+}] "OK" "assemble XNOR test"
+assert_eq [dump 4 2] "18 2b" "XNOR assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "0000 ff55 00aa 0000 0000 0000 0001" "XNOR executed"
+
+do_reset
+assert_eq [assemble {
+	IMMS r1 0x10f
+	IMMS r2 0x10f
+	XNOR r0 r1 r2
+}] "OK" "assemble XNOR test 2"
+assert_eq [dump 4 2] "18 2b" "XNOR 2 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "ffff ff0f ff0f 0000 0000 0000 0002" "XNOR 2 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 0x0ff
+	IMM r2 0x040
+	XNOR r0 r1 r2
+}] "OK" "assemble XNOR test 3"
+assert_eq [dump 4 2] "18 2b" "XNOR 3 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "ff40 00ff 0040 0000 0000 0000 0002" "XNOR 3 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 0x088
+	SHL r0 r1 8
+}] "OK" "assemble SHL test"
+assert_eq [dump 2 2] "20 28" "SHL assembled correctly"
+do_exec
+do_exec
+assert_eq [get_pc] 4 "pc advanced"
+assert_eq [get_regs] "8800 0088 0000 0000 0000 0000 0002" "SHL executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 0x088
+	SHL r0 r1 9
+}] "OK" "assemble SHL test 2"
+assert_eq [dump 2 2] "20 29" "SHL 2 assembled correctly"
+do_exec
+do_exec
+assert_eq [get_pc] 4 "pc advanced"
+assert_eq [get_regs] "1000 0088 0000 0000 0000 0000 0004" "SHL 2 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 0x088
+	SHL r0 r1 13
+}] "OK" "assemble SHL test 3"
+assert_eq [dump 2 2] "20 2d" "SHL 3 assembled correctly"
+do_exec
+do_exec
+assert_eq [get_pc] 4 "pc advanced"
+assert_eq [get_regs] "0000 0088 0000 0000 0000 0000 0005" "SHL 3 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 0x088
+	SHL r0 r1 14
+}] "OK" "assemble SHL test 4"
+assert_eq [dump 2 2] "20 2e" "SHL 4 assembled correctly"
+do_exec
+do_exec
+assert_eq [get_pc] 4 "pc advanced"
+assert_eq [get_regs] "0000 0088 0000 0000 0000 0000 0001" "SHL 4 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 0x088
+	SHR r0 r1 3
+}] "OK" "assemble SHR test"
+assert_eq [dump 2 2] "20 33" "SHR assembled correctly"
+do_exec
+do_exec
+assert_eq [get_pc] 4 "pc advanced"
+assert_eq [get_regs] "0011 0088 0000 0000 0000 0000 0000" "SHR executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 0x088
+	SHR r0 r1 4
+}] "OK" "assemble SHR test 2"
+assert_eq [dump 2 2] "20 34" "SHR 2 assembled correctly"
+do_exec
+do_exec
+assert_eq [get_pc] 4 "pc advanced"
+assert_eq [get_regs] "0008 0088 0000 0000 0000 0000 0004" "SHR 2 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 0x088
+	SHR r0 r1 8
+}] "OK" "assemble SHR test 3"
+assert_eq [dump 2 2] "20 38" "SHR 3 assembled correctly"
+do_exec
+do_exec
+assert_eq [get_pc] 4 "pc advanced"
+assert_eq [get_regs] "0000 0088 0000 0000 0000 0000 0005" "SHR 3 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 0x088
+	SHR r0 r1 9
+}] "OK" "assemble SHR test 4"
+assert_eq [dump 2 2] "20 39" "SHR 4 assembled correctly"
+do_exec
+do_exec
+assert_eq [get_pc] 4 "pc advanced"
+assert_eq [get_regs] "0000 0088 0000 0000 0000 0000 0001" "SHR 4 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 0x088
+	IMM r2 3
+	BSH r0 r1 r2
+}] "OK" "assemble BSH test"
+assert_eq [dump 4 2] "28 28" "BSH assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "0011 0088 0003 0000 0000 0000 0000" "BSH executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 0x088
+	IMM r2 4
+	BSH r0 r1 r2
+}] "OK" "assemble BSH test 2"
+assert_eq [dump 4 2] "28 28" "BSH 2 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "0008 0088 0004 0000 0000 0000 0004" "BSH 2 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 0x088
+	IMM r2 7
+	BSH r0 r1 r2
+}] "OK" "assemble BSH test 3"
+assert_eq [dump 4 2] "28 28" "BSH 3 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "0001 0088 0007 0000 0000 0000 0000" "BSH 3 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 0x088
+	IMM r2 8
+	BSH r0 r1 r2
+}] "OK" "assemble BSH test 4"
+assert_eq [dump 4 2] "28 28" "BSH 4 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "0000 0088 0008 0000 0000 0000 0005" "BSH 4 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 0x088
+	IMMS r2 0x1ff
+	BSH r0 r1 r2
+}] "OK" "assemble BSH test 5"
+assert_eq [dump 4 2] "28 28" "BSH 5 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "0110 0088 ffff 0000 0000 0000 0000" "BSH 5 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 0x088
+	IMMS r2 0x1f8
+	BSH r0 r1 r2
+}] "OK" "assemble BSH test 6"
+assert_eq [dump 4 2] "28 28" "BSH 6 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "8800 0088 fff8 0000 0000 0000 0002" "BSH 6 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 0x088
+	IMMS r2 0x1f7
+	BSH r0 r1 r2
+}] "OK" "assemble BSH test 6"
+assert_eq [dump 4 2] "28 28" "BSH 6 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "1000 0088 fff7 0000 0000 0000 0004" "BSH 6 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 0x088
+	IMMS r2 0x1f4
+	BSH r0 r1 r2
+}] "OK" "assemble BSH test 7"
+assert_eq [dump 4 2] "28 28" "BSH 7 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "8000 0088 fff4 0000 0000 0000 0002" "BSH 7 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 0x088
+	IMMS r2 0x1f3
+	BSH r0 r1 r2
+}] "OK" "assemble BSH test 8"
+assert_eq [dump 4 2] "28 28" "BSH 8 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "0000 0088 fff3 0000 0000 0000 0005" "BSH 8 executed"
+
+do_reset
+assert_eq [assemble {
+	IMMS r1 0x188
+	IMM r2 3
+	BSH r0 r1 r2
+}] "OK" "assemble BSH test 9"
+assert_eq [dump 4 2] "28 28" "BSH 9 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "1ff1 ff88 0003 0000 0000 0000 0000" "BSH 9 executed"
+
+do_reset
+assert_eq [assemble {
+	IMMS r1 0x188
+	IMM r2 4
+	BSH r0 r1 r2
+}] "OK" "assemble BSH test 10"
+assert_eq [dump 4 2] "28 28" "BSH 10 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "0ff8 ff88 0004 0000 0000 0000 0004" "BSH 10 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 0x088
+	IMM r2 3
+	ABSH r0 r1 r2
+}] "OK" "assemble ABSH test"
+assert_eq [dump 4 2] "28 29" "ABSH assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "0011 0088 0003 0000 0000 0000 0000" "ABSH executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 0x088
+	IMM r2 4
+	ABSH r0 r1 r2
+}] "OK" "assemble ABSH test 2"
+assert_eq [dump 4 2] "28 29" "ABSH 2 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "0008 0088 0004 0000 0000 0000 0004" "ABSH 2 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 0x088
+	IMM r2 7
+	ABSH r0 r1 r2
+}] "OK" "assemble ABSH test 3"
+assert_eq [dump 4 2] "28 29" "ABSH 3 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "0001 0088 0007 0000 0000 0000 0000" "ABSH 3 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 0x088
+	IMM r2 8
+	ABSH r0 r1 r2
+}] "OK" "assemble ABSH test 4"
+assert_eq [dump 4 2] "28 29" "ABSH 4 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "0000 0088 0008 0000 0000 0000 0005" "ABSH 4 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 0x088
+	IMMS r2 0x1ff
+	ABSH r0 r1 r2
+}] "OK" "assemble ABSH test 5"
+assert_eq [dump 4 2] "28 29" "ABSH 5 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "0110 0088 ffff 0000 0000 0000 0000" "ABSH 5 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 0x088
+	IMMS r2 0x1f8
+	ABSH r0 r1 r2
+}] "OK" "assemble ABSH test 6"
+assert_eq [dump 4 2] "28 29" "ABSH 6 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "8800 0088 fff8 0000 0000 0000 0002" "ABSH 6 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 0x088
+	IMMS r2 0x1f7
+	ABSH r0 r1 r2
+}] "OK" "assemble ABSH test 6"
+assert_eq [dump 4 2] "28 29" "ABSH 6 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "1000 0088 fff7 0000 0000 0000 0004" "ABSH 6 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 0x088
+	IMMS r2 0x1f4
+	ABSH r0 r1 r2
+}] "OK" "assemble ABSH test 7"
+assert_eq [dump 4 2] "28 29" "ABSH 7 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "8000 0088 fff4 0000 0000 0000 0002" "ABSH 7 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 0x088
+	IMMS r2 0x1f3
+	ABSH r0 r1 r2
+}] "OK" "assemble ABSH test 8"
+assert_eq [dump 4 2] "28 29" "ABSH 8 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "0000 0088 fff3 0000 0000 0000 0005" "ABSH 8 executed"
+
+do_reset
+assert_eq [assemble {
+	IMMS r1 0x188
+	IMM r2 3
+	ABSH r0 r1 r2
+}] "OK" "assemble ABSH test 9"
+assert_eq [dump 4 2] "28 29" "ABSH 9 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "fff1 ff88 0003 0000 0000 0000 0002" "ABSH 9 executed"
+
+do_reset
+assert_eq [assemble {
+	IMMS r1 0x188
+	IMM r2 4
+	ABSH r0 r1 r2
+}] "OK" "assemble ABSH test 10"
+assert_eq [dump 4 2] "28 29" "ABSH 10 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "fff8 ff88 0004 0000 0000 0000 0006" "ABSH 10 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r0 8
+	IMM r1 4
+	XCH r0 r1
+}] "OK" "assemble XCH test"
+assert_eq [dump 4 2] "30 04" "XCH assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "0004 0008 0000 0000 0000 0000 0000" "XCH executed"
+
+do_reset
+assert_eq [assemble {
+	IMMS r0 0x1ff
+	IMM r1 1
+	XCH r0 r1
+}] "OK" "assemble XCH test 2"
+assert_eq [dump 4 2] "30 04" "XCH 2 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "0001 ffff 0000 0000 0000 0000 0000" "XCH 2 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r0 1
+	TST r0
+}] "OK" "assemble TST test"
+assert_eq [dump 2 2] "38 00" "TST assembled correctly"
+do_exec
+do_exec
+assert_eq [get_pc] 4 "pc advanced"
+assert_eq [get_regs] "0001 0000 0000 0000 0000 0000 0000" "TST executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r0 0
+	TST r0
+}] "OK" "assemble TST test 2"
+assert_eq [dump 2 2] "38 00" "TST 2 assembled correctly"
+do_exec
+do_exec
+assert_eq [get_pc] 4 "pc advanced"
+assert_eq [get_regs] "0000 0000 0000 0000 0000 0000 0001" "TST 2 executed"
+
+do_reset
+assert_eq [assemble {
+	IMMS r0 0x1ff
+	TST r0
+}] "OK" "assemble TST test 3"
+assert_eq [dump 2 2] "38 00" "TST 3 assembled correctly"
+do_exec
+do_exec
+assert_eq [get_pc] 4 "pc advanced"
+assert_eq [get_regs] "ffff 0000 0000 0000 0000 0000 0002" "TST 3 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r0 1
+	IMM r1 1
+	CMP r0 r1
+}] "OK" "assemble CMP test"
+assert_eq [dump 4 2] "38 05" "CMP assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "0001 0001 0000 0000 0000 0000 0001" "CMP executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r0 1
+	IMM r1 0
+	CMP r0 r1
+}] "OK" "assemble CMP test 2"
+assert_eq [dump 4 2] "38 05" "CMP 2 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "0001 0000 0000 0000 0000 0000 0000" "CMP 2 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r0 0
+	IMM r1 1
+	CMP r0 r1
+}] "OK" "assemble CMP test 3"
+assert_eq [dump 4 2] "38 05" "CMP 3 assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "0000 0001 0000 0000 0000 0000 0002" "CMP 3 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r0 0
+}] "OK" "assemble IMM test"
+assert_eq [dump 0 2] "80 00" "IMM assembled correctly"
+do_exec
+assert_eq [get_pc] 2 "pc advanced"
+assert_eq [get_regs] "0000 0000 0000 0000 0000 0000 0000" "IMM executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r0 1
+}] "OK" "assemble IMM test 2"
+assert_eq [dump 0 2] "80 01" "IMM 2 assembled correctly"
+do_exec
+assert_eq [get_pc] 2 "pc advanced"
+assert_eq [get_regs] "0001 0000 0000 0000 0000 0000 0000" "IMM 2 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r0 0x1ff
+}] "OK" "assemble IMM test 3"
+assert_eq [dump 0 2] "81 ff" "IMM 3 assembled correctly"
+do_exec
+assert_eq [get_pc] 2 "pc advanced"
+assert_eq [get_regs] "01ff 0000 0000 0000 0000 0000 0000" "IMM 3 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 1
+}] "OK" "assemble IMM test 4"
+assert_eq [dump 0 2] "82 01" "IMM 4 assembled correctly"
+do_exec
+assert_eq [get_pc] 2 "pc advanced"
+assert_eq [get_regs] "0000 0001 0000 0000 0000 0000 0000" "IMM 4 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r2 1
+}] "OK" "assemble IMM test 5"
+assert_eq [dump 0 2] "84 01" "IMM 5 assembled correctly"
+do_exec
+assert_eq [get_pc] 2 "pc advanced"
+assert_eq [get_regs] "0000 0000 0001 0000 0000 0000 0000" "IMM 5 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r3 1
+}] "OK" "assemble IMM test 6"
+assert_eq [dump 0 2] "86 01" "IMM 6 assembled correctly"
+do_exec
+assert_eq [get_pc] 2 "pc advanced"
+assert_eq [get_regs] "0000 0000 0000 0001 0000 0000 0000" "IMM 6 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r4 1
+}] "OK" "assemble IMM test 7"
+assert_eq [dump 0 2] "88 01" "IMM 7 assembled correctly"
+do_exec
+assert_eq [get_pc] 2 "pc advanced"
+assert_eq [get_regs] "0000 0000 0000 0000 0001 0000 0000" "IMM 7 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r5 1
+}] "OK" "assemble IMM test 8"
+assert_eq [dump 0 2] "8a 01" "IMM 8 assembled correctly"
+do_exec
+assert_eq [get_pc] 2 "pc advanced"
+assert_eq [get_regs] "0000 0000 0000 0000 0000 0001 0000" "IMM 8 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM status 1
+}] "OK" "assemble IMM test 9"
+assert_eq [dump 0 2] "8c 01" "IMM 9 assembled correctly"
+do_exec
+assert_eq [get_pc] 2 "pc advanced"
+assert_eq [get_regs] "0000 0000 0000 0000 0000 0000 0000" "IMM 9 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM zero 1
+}] "OK" "assemble IMM test 10"
+assert_eq [dump 0 2] "8e 01" "IMM 10 assembled correctly"
+do_exec
+assert_eq [get_pc] 2 "pc advanced"
+assert_eq [get_regs] "0000 0000 0000 0000 0000 0000 0000" "IMM 10 executed"
+
+do_reset
+assert_eq [assemble {
+	IMMS r0 0
+}] "OK" "assemble IMMS test"
+assert_eq [dump 0 2] "90 00" "IMMS assembled correctly"
+do_exec
+assert_eq [get_pc] 2 "pc advanced"
+assert_eq [get_regs] "0000 0000 0000 0000 0000 0000 0000" "IMMS executed"
+
+do_reset
+assert_eq [assemble {
+	IMMS r0 1
+}] "OK" "assemble IMMS test 2"
+assert_eq [dump 0 2] "90 01" "IMMS 2 assembled correctly"
+do_exec
+assert_eq [get_pc] 2 "pc advanced"
+assert_eq [get_regs] "0001 0000 0000 0000 0000 0000 0000" "IMMS 2 executed"
+
+do_reset
+assert_eq [assemble {
+	IMMS r0 0x1ff
+}] "OK" "assemble IMMS test 3"
+assert_eq [dump 0 2] "91 ff" "IMMS 3 assembled correctly"
+do_exec
+assert_eq [get_pc] 2 "pc advanced"
+assert_eq [get_regs] "ffff 0000 0000 0000 0000 0000 0000" "IMMS 3 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 16
+	LOADBR r0 r1
+}] "OK" "assemble LOADBR test"
+assert_eq [dump 2 2] "f0 04" "LOADBR assembled correctly"
+store_byte 16 127
+do_exec
+do_exec
+assert_eq [get_pc] 4 "pc advanced"
+assert_eq [get_regs] "007f 0010 0000 0000 0000 0000 0000" "LOADBR executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 16
+	LOADBR r0 r1
+}] "OK" "assemble LOADBR test 2"
+assert_eq [dump 2 2] "f0 04" "LOADBR 2 assembled correctly"
+store_byte 16 255
+do_exec
+do_exec
+assert_eq [get_pc] 4 "pc advanced"
+assert_eq [get_regs] "00ff 0010 0000 0000 0000 0000 0000" "LOADBR 2 executed"
+
+do_reset
+assert_eq [assemble {
+	LOADBI r0 16
+}] "OK" "assemble LOADBI test"
+assert_eq [dump 0 2] "a0 10" "LOADBI assembled correctly"
+store_byte 16 127
+do_exec
+assert_eq [get_pc] 2 "pc advanced"
+assert_eq [get_regs] "007f 0000 0000 0000 0000 0000 0000" "LOADBI executed"
+
+do_reset
+assert_eq [assemble {
+	LOADBI r0 16
+}] "OK" "assemble LOADBI test 2"
+assert_eq [dump 0 2] "a0 10" "LOADBI 2 assembled correctly"
+store_byte 16 255
+do_exec
+assert_eq [get_pc] 2 "pc advanced"
+assert_eq [get_regs] "00ff 0000 0000 0000 0000 0000 0000" "LOADBI 2 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 16
+	LOADSR r0 r1
+}] "OK" "assemble LOADSR test"
+assert_eq [dump 2 2] "f2 04" "LOADSR assembled correctly"
+store_byte 16 127
+do_exec
+do_exec
+assert_eq [get_pc] 4 "pc advanced"
+assert_eq [get_regs] "007f 0010 0000 0000 0000 0000 0000" "LOADSR executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 16
+	LOADSR r0 r1
+}] "OK" "assemble LOADSR test 2"
+assert_eq [dump 2 2] "f2 04" "LOADSR 2 assembled correctly"
+store_byte 16 255
+do_exec
+do_exec
+assert_eq [get_pc] 4 "pc advanced"
+assert_eq [get_regs] "ffff 0010 0000 0000 0000 0000 0000" "LOADSR 2 executed"
+
+do_reset
+assert_eq [assemble {
+	LOADSI r0 16
+}] "OK" "assemble LOADSI test"
+assert_eq [dump 0 2] "b0 10" "LOADSI assembled correctly"
+store_byte 16 127
+do_exec
+assert_eq [get_pc] 2 "pc advanced"
+assert_eq [get_regs] "007f 0000 0000 0000 0000 0000 0000" "LOADSI executed"
+
+do_reset
+assert_eq [assemble {
+	LOADSI r0 16
+}] "OK" "assemble LOADSI test 2"
+assert_eq [dump 0 2] "b0 10" "LOADSI 2 assembled correctly"
+store_byte 16 255
+do_exec
+assert_eq [get_pc] 2 "pc advanced"
+assert_eq [get_regs] "ffff 0000 0000 0000 0000 0000 0000" "LOADSI 2 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 16
+	LOADWR r0 r1
+}] "OK" "assemble LOADWR test"
+assert_eq [dump 2 2] "f4 04" "LOADWR assembled correctly"
+store_word 16 257
+do_exec
+do_exec
+assert_eq [get_pc] 4 "pc advanced"
+assert_eq [get_regs] "0101 0010 0000 0000 0000 0000 0000" "LOADWR executed"
+
+do_reset
+assert_eq [assemble {
+	LOADWI r0 16
+}] "OK" "assemble LOADWI test"
+assert_eq [dump 0 2] "c0 10" "LOADWI assembled correctly"
+store_word 16 257
+do_exec
+assert_eq [get_pc] 2 "pc advanced"
+assert_eq [get_regs] "0101 0000 0000 0000 0000 0000 0000" "LOADWI executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r0 16
+	IMM r1 0x181
+	STOREBR r0 r1
+}] "OK" "assemble STOREBR test"
+assert_eq [dump 4 2] "f6 04" "STOREBR assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "0010 0181 0000 0000 0000 0000 0000" "registers prepared"
+assert_eq [load_byte 16] 129 "STOREBR executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 0x181
+	STOREBI r1 16
+}] "OK" "assemble STOREBI test"
+assert_eq [dump 2 2] "d2 10" "STOREBI assembled correctly"
+do_exec
+do_exec
+assert_eq [get_pc] 4 "pc advanced"
+assert_eq [get_regs] "0000 0181 0000 0000 0000 0000 0000" "registers prepared"
+assert_eq [load_byte 16] 129 "STOREBI executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r0 16
+	IMM r1 0x181
+	STOREWR r0 r1
+}] "OK" "assemble STOREWR test"
+assert_eq [dump 4 2] "f8 04" "STOREWR assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "0010 0181 0000 0000 0000 0000 0000" "registers prepared"
+assert_eq [load_word 16] 385 "STOREWR executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r1 0x181
+	STOREWI r1 16
+}] "OK" "assemble STOREWI test"
+assert_eq [dump 2 2] "e2 10" "STOREWI assembled correctly"
+do_exec
+do_exec
+assert_eq [get_pc] 4 "pc advanced"
+assert_eq [get_regs] "0000 0181 0000 0000 0000 0000 0000" "registers prepared"
+assert_eq [load_word 16] 385 "STOREWI executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r0 16
+	IMM r1 24
+	MXCH r0 r1
+}] "OK" "assemble MXCH test"
+assert_eq [dump 4 2] "fa 04" "MXCH assembled correctly"
+store_byte 16 129
+store_byte 24 126
+do_exec
+do_exec
+do_exec
+assert_eq [get_pc] 6 "pc advanced"
+assert_eq [get_regs] "0010 0018 0000 0000 0000 0000 0000" "registers prepared"
+assert_eq [load_byte 16] 126 "MXCH partially executed"
+assert_eq [load_byte 24] 129 "MXCH partially executed"
 
 send "exit\r"
 expect eof

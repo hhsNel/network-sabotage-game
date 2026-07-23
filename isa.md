@@ -78,7 +78,7 @@
 | [0][0][000][DDD]   [AAA][BBB][10]   | SUB      | Subtracts the B register from the A register, and stores the result in D. Sets ZNCV |
 | [0][0][001][DDD]   [AAA][BBB][00]   | MUL      | Integer signed multiplies the A and B registers together, then stores the result in D. Sets ZN. Isn't available on all computers |
 | [0][0][001][DDD]   [AAA][BBB][01]   | DIV      | Integer signed divides the A register by the B register, and stores the result in D. Division by 0 results in 0. Sets ZN. Isn't available on all computers |
-| [0][0][001][DDD]   [AAA][BBB][10]   | MOD      | Stores the remainder of integer division of the A regster by the B register into D. Modulo 0 results in 0. Sets Z. Isn't available on all computers |
+| [0][0][001][DDD]   [AAA][BBB][10]   | MOD      | Stores the remainder of integer digned division of the A regster by the B register into D. Modulo 0 results in 0. Sets ZN. Isn't available on all computers |
 | [0][0][010][DDD]   [AAA][BBB][?][0] | AND      | Bitands the A and B registers, then stores the result in D. Sets ZN |
 | [0][0][010][DDD]   [AAA][BBB][?][1] | OR       | Bitors the A and B registers, then stores the result in D. Sets ZN |
 | [0][0][011][DDD]   [AAA][BBB][00]   | NAND     | Bitwise nands the A and B registers, then stores the result in D. Sets ZN. Isn't available on all computers |

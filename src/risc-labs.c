@@ -807,13 +807,15 @@ generate_caps(unsigned int spare_points)
 {
 	rl_capabilities c;
 	unsigned int idx;
+	unsigned int fails;
 
-	c = 0;
-	while(spare_points > 0) {
+	c = CAP_BASE;
+	fails = 0;
+	while(spare_points > 0 && fails < 16) {
 		idx = rand() / ((RAND_MAX+1u) / (sizeof(all_caps)/sizeof(*all_caps)));
-		if(idx >= CAPS_2PT && spare_points < 3) continue;
-		if(idx >= CAPS_1PT && spare_points < 2) continue;
-		if((c & all_caps[idx]) == all_caps[idx]) continue;
+		if(idx >= CAPS_2PT && spare_points < 3) { ++fails; continue; }
+		if(idx >= CAPS_1PT && spare_points < 2) { ++fails; continue; }
+		if((c & all_caps[idx]) == all_caps[idx]) { ++fails; continue; }
 
 		c |= all_caps[idx];
 		if(idx >= CAPS_2PT) spare_points -= 3;
@@ -1353,6 +1355,7 @@ MOD(struct node *n, struct decoded_instr di)
 	set_reg(n, di.data.reg_dab.destination, res);
 
 	raise_Z(n, res);
+	raise_N(n, res);
 
 	advance_pc(n);
 }
@@ -1497,14 +1500,16 @@ BSH(struct node *n, struct decoded_instr di)
 	a = get_reg(n, di.data.reg_dab.a);
 	b = get_reg(n, di.data.reg_dab.b);
 	if((b & 0x8000) == 0) {
-		res = a >> (b & 0x000F);
-		if(di.data.reg_dsn.n > 0) {
+		b &= 0x000F;
+		res = a >> b;
+		if(b > 0) {
 			raise_C(n, (a >> (b-1)) & 1);
 		} else {
 			raise_C(n, 0);
 		}
 	} else {
-		res = a << ((-b) & 0x000F);
+		b = (-b) & 0x000F;
+		res = a << b;
 		if(b > 0) {
 			raise_C(n, (a >> (16-b)) & 1);
 		} else {
@@ -1528,17 +1533,19 @@ ABSH(struct node *n, struct decoded_instr di)
 	a = get_reg(n, di.data.reg_dab.a);
 	b = get_reg(n, di.data.reg_dab.b);
 	if((b & 0x8000) == 0) {
-		res = a >> (b & 0x000F);
+		b &= 0x000F;
+		res = a >> b;
 		if(a & 0x8000) {
-			res |= (0xFFFF << (16 - (b & 0x000F))) & 0xFFFF;
+			res |= (0xFFFF << (16 - b)) & 0xFFFF;
 		}
-		if(di.data.reg_dsn.n > 0) {
+		if(b > 0) {
 			raise_C(n, (a >> (b-1)) & 1);
 		} else {
 			raise_C(n, 0);
 		}
 	} else {
-		res = a << ((-b) & 0x000F);
+		b = -b;
+		res = a << (b & 0x000F);
 		if(b > 0) {
 			raise_C(n, (a >> (16-b)) & 1);
 		} else {

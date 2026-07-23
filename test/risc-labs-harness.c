@@ -24,6 +24,8 @@ int main() {
 	cd = rl.data;
 	rld = cd->data;
 
+	rld->caps = -1; /* hack to enable all instructions */
+
 	printf("READY\n");
 	while(1) {
 		scanf("%1023[^\n]%*c", cmd);
