@@ -122,13 +122,18 @@ struct decoded_instr {
 	} data;
 };
 
-enum rl_asm_token_type { RL_ASM_TK_MNEMONIC, RL_ASM_TK_REG, RL_ASM_TK_PORT, RL_ASM_TK_NUMBER, RL_ASM_TK_EQU, RL_ASM_TK_IDENT, RL_ASM_TK_COLON, RL_ASM_TK_EOF, RL_ASM_TK_ERROR };
+enum rl_asm_token_type { RL_ASM_TK_MNEMONIC, RL_ASM_TK_REG, RL_ASM_TK_PORT, RL_ASM_TK_COND, RL_ASM_TK_NUMBER, RL_ASM_TK_EQU, RL_ASM_TK_IDENT, RL_ASM_TK_COLON, RL_ASM_TK_EOF, RL_ASM_TK_ERROR };
+#define RL_PSEUDOOP_DB (-1)
+#define RL_PSEUDOOP_DW (-2)
+#define RL_PSEUDOOP_JMP (-3)
+#define RL_PSEUDOOP_JREL (-4)
 struct rl_asm_token {
 	enum rl_asm_token_type type;
 	union {
 		enum rl_opcode mnemonic;
 		enum rl_reg reg;
 		enum rl_port port;
+		enum rl_condition cond;
 		uint16_t number;
 		struct {
 			char *begin;
@@ -290,7 +295,7 @@ rl_asm(uint8_t *out_buf, size_t out_size, char *in_str)
 	struct symbol { char *begin; size_t length; uint16_t value; };
 	struct symbol *symbol_table;
 	unsigned int num_symbols, cap_symbols;
-	enum operand_type { OP_REGISTER, OP_PORT, OP_NUMBER, OP_RELATIVE, OP_NONE };
+	enum operand_type { OP_REGISTER, OP_PORT, OP_NUMBER, OP_RELATIVE, OP_COND, OP_NONE };
 	struct operand { enum operand_type type; uint8_t start_index; uint8_t bit_width; };
 	struct instr_shape { enum rl_opcode mnemonic; uint16_t template; struct operand operands[3]; };
 	static struct instr_shape instruction_shapes[] = {
@@ -298,48 +303,55 @@ rl_asm(uint8_t *out_buf, size_t out_size, char *in_str)
 #define PORT(IDX) { OP_PORT, (IDX), 3 }
 #define NUMBER(IDX,WIDTH) { OP_NUMBER, (IDX), (WIDTH) }
 #define RELATIVE(IDX,WIDTH) { OP_RELATIVE, (IDX), (WIDTH) }
+#define CONDITION(IDX) { OP_COND, (IDX), 3 }
 #define NONE { OP_NONE, 0, 0 }
-		{ RL_MOV,     0x0000, { REGISTER(5),  REGISTER(8),    NONE } },
-		{ RL_ADD,     0x0001, { REGISTER(5),  REGISTER(8),    REGISTER(11) } },
-		{ RL_SUB,     0x0002, { REGISTER(5),  REGISTER(8),    REGISTER(11) } },
-		{ RL_MUL,     0x0800, { REGISTER(5),  REGISTER(8),    REGISTER(11) } },
-		{ RL_DIV,     0x0801, { REGISTER(5),  REGISTER(8),    REGISTER(11) } },
-		{ RL_MOD,     0x0802, { REGISTER(5),  REGISTER(8),    REGISTER(11) } },
-		{ RL_AND,     0x1000, { REGISTER(5),  REGISTER(8),    REGISTER(11) } },
-		{ RL_OR,      0x1001, { REGISTER(5),  REGISTER(8),    REGISTER(11) } },
-		{ RL_NAND,    0x1800, { REGISTER(5),  REGISTER(8),    REGISTER(11) } },
-		{ RL_NOR,     0x1801, { REGISTER(5),  REGISTER(8),    REGISTER(11) } },
-		{ RL_XOR,     0x1802, { REGISTER(5),  REGISTER(8),    REGISTER(11) } },
-		{ RL_XNOR,    0x1803, { REGISTER(5),  REGISTER(8),    REGISTER(11) } },
-		{ RL_SHL,     0x2000, { REGISTER(5),  REGISTER(8),    NUMBER(12,4) } },
-		{ RL_SHR,     0x2010, { REGISTER(5),  REGISTER(8),    NUMBER(12,4) } },
-		{ RL_BSH,     0x2800, { REGISTER(5),  REGISTER(8),    REGISTER(11) } },
-		{ RL_ABSH,    0x2801, { REGISTER(5),  REGISTER(8),    REGISTER(11) } },
-		{ RL_XCH,     0x3000, { REGISTER(8),  REGISTER(11),   NONE } },
-		{ RL_TST,     0x3800, { REGISTER(8),  NONE,           NONE } },
-		{ RL_CMP,     0x3801, { REGISTER(8),  REGISTER(11),   NONE } },
-		{ RL_IMM,     0x8000, { REGISTER(4),  NUMBER(7,9),    NONE } },
-		{ RL_IMMS,    0x9000, { REGISTER(4),  NUMBER(7,9),    NONE } },
-		{ RL_LOADBR,  0xF000, { REGISTER(8),  REGISTER(11),   NONE } },
-		{ RL_LOADBI,  0xA000, { REGISTER(4),  NUMBER(7,9),    NONE } },
-		{ RL_LOADSR,  0xF200, { REGISTER(8),  REGISTER(11),   NONE } },
-		{ RL_LOADSI,  0xB000, { REGISTER(4),  NUMBER(7,9),    NONE } },
-		{ RL_LOADWR,  0xF400, { REGISTER(8),  REGISTER(11),   NONE } },
-		{ RL_LOADWI,  0xC000, { REGISTER(4),  NUMBER(7,9),    NONE } },
-		{ RL_STOREBR, 0xF600, { REGISTER(8),  REGISTER(11),   NONE } },
-		{ RL_STOREBI, 0xD000, { REGISTER(4),  NUMBER(7,9),    NONE } },
-		{ RL_STOREWR, 0xF800, { REGISTER(8),  REGISTER(11),   NONE } },
-		{ RL_STOREWI, 0xE000, { REGISTER(4),  NUMBER(7,9),    NONE } },
-		{ RL_MXCH,    0xFA00, { REGISTER(8),  REGISTER(11),   NONE } },
-		/* TODO conditions */
-		{ RL_JEc,     0x5000, { NUMBER(5,4),  RELATIVE(10,6), NONE } },
-		{ RL_JENc,    0x5040, { NUMBER(5,4),  RELATIVE(10,6), NONE } },
-		{ RL_JAc,     0x5800, { NUMBER(5,4),  RELATIVE(10,6), NONE } },
-		{ RL_JANc,    0x5840, { NUMBER(5,4),  RELATIVE(10,6), NONE } },
-		{ RL_IN,      0x6000, { REGISTER(5),  PORT(8),        NONE } },
-		{ RL_OUT,     0x6800, { REGISTER(5),  PORT(8),        NONE } },
-		{ RL_INM,     0x7000, { REGISTER(5),  PORT(8),        NONE } },
-		{ RL_OUTM,    0x7800, { REGISTER(5),  PORT(8),        NONE } },
+		{ RL_MOV,           0x0000, { REGISTER(5),   REGISTER(8),    NONE } },
+		{ RL_ADD,           0x0001, { REGISTER(5),   REGISTER(8),    REGISTER(11) } },
+		{ RL_SUB,           0x0002, { REGISTER(5),   REGISTER(8),    REGISTER(11) } },
+		{ RL_MUL,           0x0800, { REGISTER(5),   REGISTER(8),    REGISTER(11) } },
+		{ RL_DIV,           0x0801, { REGISTER(5),   REGISTER(8),    REGISTER(11) } },
+		{ RL_MOD,           0x0802, { REGISTER(5),   REGISTER(8),    REGISTER(11) } },
+		{ RL_AND,           0x1000, { REGISTER(5),   REGISTER(8),    REGISTER(11) } },
+		{ RL_OR,            0x1001, { REGISTER(5),   REGISTER(8),    REGISTER(11) } },
+		{ RL_NAND,          0x1800, { REGISTER(5),   REGISTER(8),    REGISTER(11) } },
+		{ RL_NOR,           0x1801, { REGISTER(5),   REGISTER(8),    REGISTER(11) } },
+		{ RL_XOR,           0x1802, { REGISTER(5),   REGISTER(8),    REGISTER(11) } },
+		{ RL_XNOR,          0x1803, { REGISTER(5),   REGISTER(8),    REGISTER(11) } },
+		{ RL_SHL,           0x2000, { REGISTER(5),   REGISTER(8),    NUMBER(12,4) } },
+		{ RL_SHR,           0x2010, { REGISTER(5),   REGISTER(8),    NUMBER(12,4) } },
+		{ RL_BSH,           0x2800, { REGISTER(5),   REGISTER(8),    REGISTER(11) } },
+		{ RL_ABSH,          0x2801, { REGISTER(5),   REGISTER(8),    REGISTER(11) } },
+		{ RL_XCH,           0x3000, { REGISTER(8),   REGISTER(11),   NONE } },
+		{ RL_TST,           0x3800, { REGISTER(8),   NONE,           NONE } },
+		{ RL_CMP,           0x3801, { REGISTER(8),   REGISTER(11),   NONE } },
+		{ RL_IMM,           0x8000, { REGISTER(4),   NUMBER(7,9),    NONE } },
+		{ RL_IMMS,          0x9000, { REGISTER(4),   NUMBER(7,9),    NONE } },
+		{ RL_LOADBR,        0xF000, { REGISTER(8),   REGISTER(11),   NONE } },
+		{ RL_LOADBI,        0xA000, { REGISTER(4),   NUMBER(7,9),    NONE } },
+		{ RL_LOADSR,        0xF200, { REGISTER(8),   REGISTER(11),   NONE } },
+		{ RL_LOADSI,        0xB000, { REGISTER(4),   NUMBER(7,9),    NONE } },
+		{ RL_LOADWR,        0xF400, { REGISTER(8),   REGISTER(11),   NONE } },
+		{ RL_LOADWI,        0xC000, { REGISTER(4),   NUMBER(7,9),    NONE } },
+		{ RL_STOREBR,       0xF600, { REGISTER(8),   REGISTER(11),   NONE } },
+		{ RL_STOREBI,       0xD000, { REGISTER(4),   NUMBER(7,9),    NONE } },
+		{ RL_STOREWR,       0xF800, { REGISTER(8),   REGISTER(11),   NONE } },
+		{ RL_STOREWI,       0xE000, { REGISTER(4),   NUMBER(7,9),    NONE } },
+		{ RL_MXCH,          0xFA00, { REGISTER(8),   REGISTER(11),   NONE } },
+		{ RL_Jc,            0x4000, { CONDITION(5),  RELATIVE(8,8), NONE } },
+		{ RL_JRELc,         0x4800, { CONDITION(5),  REGISTER(8),   NUMBER(11,5) } },
+		{ RL_JEc,           0x5000, { NUMBER(5,4),   RELATIVE(10,6), NONE } },
+		{ RL_JENc,          0x5040, { NUMBER(5,4),   RELATIVE(10,6), NONE } },
+		{ RL_JAc,           0x5800, { NUMBER(5,4),   RELATIVE(10,6), NONE } },
+		{ RL_JANc,          0x5840, { NUMBER(5,4),   RELATIVE(10,6), NONE } },
+		{ RL_IN,            0x6000, { REGISTER(5),   PORT(8),        NONE } },
+		{ RL_OUT,           0x6800, { REGISTER(5),   PORT(8),        NONE } },
+		{ RL_INM,           0x7000, { REGISTER(5),   PORT(8),        NONE } },
+		{ RL_OUTM,          0x7800, { REGISTER(5),   PORT(8),        NONE } },
+		/* pseudo-ops */
+		{ RL_PSEUDOOP_DB,   0x0000, { NUMBER(8,8),   NONE,           NONE } },
+		{ RL_PSEUDOOP_DW,   0x0000, { NUMBER(0,16),  NONE,           NONE } },
+		{ RL_PSEUDOOP_JMP,  0x4000, { RELATIVE(8,8), NONE,           NONE } },
+		{ RL_PSEUDOOP_JREL, 0x4800, { REGISTER(8),   NUMBER(11,5),   NONE } },
 #undef REGISTER
 #undef PORT
 #undef NUMBER
@@ -388,6 +400,16 @@ rl_asm(uint8_t *out_buf, size_t out_size, char *in_str)
 					exit(1);
 				}
 			}
+			for(j = 0; j < num_symbols; ++j) {
+				if( symbol_table[j].length == tokens[i].data.ident.length &&
+					strncmp(symbol_table[j].begin, tokens[i].data.ident.begin, tokens[i].data.ident.length) == 0 ) {
+					res.success = 0;
+					res.line = tokens[i].line;
+					res.column = tokens[i].column;
+					snprintf(res.reason, sizeof(res.reason), "symbol %.*s redefined", (int)symbol_table[j].length, symbol_table[j].begin);
+					return res;
+				}
+			}
 			switch(tokens[i+1].type) {
 			case RL_ASM_TK_COLON:
 				symbol_table[num_symbols] = (struct symbol){ tokens[i].data.ident.begin, tokens[i].data.ident.length, 2 * num_instr_records };
@@ -410,16 +432,6 @@ rl_asm(uint8_t *out_buf, size_t out_size, char *in_str)
 				res.column = tokens[i+1].column;
 				snprintf(res.reason, sizeof(res.reason), "expected COLON or EQU after IDENT");
 				return res;
-			}
-			for(j = 0; j < num_symbols; ++j) {
-				if( symbol_table[j].length == symbol_table[num_symbols].length &&
-					strncmp(symbol_table[j].begin, symbol_table[num_symbols].begin, symbol_table[num_symbols].length) == 0 ) {
-					res.success = 0;
-					res.line = tokens[i].line;
-					res.column = tokens[i].column;
-					snprintf(res.reason, sizeof(res.reason), "symbol %.*s redefined", (int)symbol_table[j].length, symbol_table[j].begin);
-					return res;
-				}
 			}
 			++num_symbols;
 			break;
@@ -468,6 +480,11 @@ rl_asm(uint8_t *out_buf, size_t out_size, char *in_str)
 				instr_records[num_instr_records].operands[OP_IDX] = tokens[i]; \
 				++i; \
 				break; \
+			case OP_COND: \
+				if(tokens[i].type != RL_ASM_TK_COND) { res.success=0; res.line=tokens[i].line; res.column=tokens[i].column; snprintf(res.reason,sizeof(res.reason),"expected condition as operand"); return res; } \
+				instr_records[num_instr_records].operands[OP_IDX] = tokens[i]; \
+				++i; \
+				break; \
 			case OP_NONE: \
 				break; \
 			}
@@ -506,6 +523,9 @@ rl_asm(uint8_t *out_buf, size_t out_size, char *in_str)
 			case RL_ASM_TK_PORT: \
 				instr_part = instr_records[i].operands[IDX].data.port; \
 				break; \
+			case RL_ASM_TK_COND: \
+				instr_part = instr_records[i].operands[IDX].data.cond; \
+				break; \
 			case RL_ASM_TK_IDENT: \
 				for(j = 0; j < num_symbols; ++j) { \
 					if( instr_records[i].operands[IDX].data.ident.length == symbol_table[j].length && \
@@ -517,8 +537,8 @@ rl_asm(uint8_t *out_buf, size_t out_size, char *in_str)
 				} \
 				if(j == num_symbols) { \
 					res.success = 0; \
-					res.line = 0; \
-					res.column = 0; \
+					res.line = instr_records[i].operands[IDX].line; \
+					res.column = instr_records[i].operands[IDX].column; \
 					snprintf(res.reason, sizeof(res.reason), "couldn't find symbol: %.*s", \
 							(int)instr_records[i].operands[IDX].data.ident.length, \
 							instr_records[i].operands[IDX].data.ident.begin); \
@@ -536,8 +556,8 @@ rl_asm(uint8_t *out_buf, size_t out_size, char *in_str)
 			if( (instr_part & opcode_bitmask) != instr_part && \
 				(instr_part & ~opcode_bitmask) != ~opcode_bitmask ) { \
 				res.success = 0; \
-				res.line = 0; \
-				res.column = 0; \
+				res.line = instr_records[i].operands[IDX].line; \
+				res.column = instr_records[i].operands[IDX].column; \
 				snprintf(res.reason, sizeof(res.reason), "operand too big (bitwise)"); \
 				return res; \
 			} \
@@ -547,10 +567,16 @@ rl_asm(uint8_t *out_buf, size_t out_size, char *in_str)
 		HANDLE_OPERAND(1);
 		HANDLE_OPERAND(2);
 #undef HANDLE_OPERAND
-		out_buf[0] = assembled_instr >> 8;
-		out_buf[1] = assembled_instr;
-		out_buf += 2;
-		out_size -= 2;
+		if(instr_records[i].shape.mnemonic != RL_PSEUDOOP_DB) {
+			out_buf[0] = assembled_instr >> 8;
+			out_buf[1] = assembled_instr;
+			out_buf += 2;
+			out_size -= 2;
+		} else {
+			*out_buf = assembled_instr & 0x00FF;
+			++out_buf;
+			--out_size;
+		}
 	}
 
 	res.success = 1;
@@ -626,19 +652,23 @@ next_tk(char **in_str, unsigned int *line, unsigned int *column)
 		{ "STOREWI",   {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_STOREWI},0,0} },
 		{ "mxch",      {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_MXCH},0,0} },
 		{ "MXCH",      {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_MXCH},0,0} },
-		/* TODO JMP */
 		{ "jc",        {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_Jc},0,0} },
+		{ "Jc",        {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_Jc},0,0} },
 		{ "JC",        {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_Jc},0,0} },
-		/* TODO JREL */
 		{ "jrelc",     {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_JRELc},0,0} },
+		{ "JRELc",     {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_JRELc},0,0} },
 		{ "JRELC",     {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_JRELc},0,0} },
 		{ "jec",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_JEc},0,0} },
+		{ "JEc",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_JEc},0,0} },
 		{ "JEC",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_JEc},0,0} },
 		{ "jenc",      {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_JENc},0,0} },
+		{ "JENc",      {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_JENc},0,0} },
 		{ "JENC",      {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_JENc},0,0} },
 		{ "jac",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_JAc},0,0} },
+		{ "JAc",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_JAc},0,0} },
 		{ "JAC",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_JAc},0,0} },
 		{ "janc",      {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_JANc},0,0} },
+		{ "JANc",      {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_JANc},0,0} },
 		{ "JANC",      {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_JANc},0,0} },
 		{ "in",        {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_IN},0,0} },
 		{ "IN",        {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_IN},0,0} },
@@ -648,6 +678,16 @@ next_tk(char **in_str, unsigned int *line, unsigned int *column)
 		{ "INM",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_INM},0,0} },
 		{ "outm",      {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_OUTM},0,0} },
 		{ "OUTM",      {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_OUTM},0,0} },
+		/* pseudo-ops */
+		{ "db",        {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_PSEUDOOP_DB},0,0} },
+		{ "DB",        {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_PSEUDOOP_DB},0,0} },
+		{ "dw",        {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_PSEUDOOP_DW},0,0} },
+		{ "DW",        {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_PSEUDOOP_DW},0,0} },
+		{ "jmp",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_PSEUDOOP_JMP},0,0} },
+		{ "JMP",       {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_PSEUDOOP_JMP},0,0} },
+		{ "jrel",      {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_PSEUDOOP_JREL},0,0} },
+		{ "JREL",      {RL_ASM_TK_MNEMONIC,{.mnemonic=RL_PSEUDOOP_JREL},0,0} },
+		/* end of pseudo-ops */
 		{ "r0",        {RL_ASM_TK_REG,{.reg=RL_REG_R0},0,0} },
 		{ "R0",        {RL_ASM_TK_REG,{.reg=RL_REG_R0},0,0} },
 		{ "r1",        {RL_ASM_TK_REG,{.reg=RL_REG_R1},0,0} },
@@ -680,6 +720,22 @@ next_tk(char **in_str, unsigned int *line, unsigned int *column)
 		{ "OPPOSITE",  {RL_ASM_TK_PORT,{.port=RL_PORT_OPPOSITE},0,0} },
 		{ "clockwise", {RL_ASM_TK_PORT,{.port=RL_PORT_CLOCKWISE},0,0} },
 		{ "CLOCKWISE", {RL_ASM_TK_PORT,{.port=RL_PORT_CLOCKWISE},0,0} },
+		{ "always",    {RL_ASM_TK_COND,{.cond=RL_COND_ALWAYS},0,0} },
+		{ "ALWAYS",    {RL_ASM_TK_COND,{.cond=RL_COND_ALWAYS},0,0} },
+		{ "zro",       {RL_ASM_TK_COND,{.cond=RL_COND_ZERO},0,0} },
+		{ "ZRO",       {RL_ASM_TK_COND,{.cond=RL_COND_ZERO},0,0} },
+		{ "neg",       {RL_ASM_TK_COND,{.cond=RL_COND_NEG},0,0} },
+		{ "NEG",       {RL_ASM_TK_COND,{.cond=RL_COND_NEG},0,0} },
+		{ "carry",     {RL_ASM_TK_COND,{.cond=RL_COND_CARRY},0,0} },
+		{ "CARRY",     {RL_ASM_TK_COND,{.cond=RL_COND_CARRY},0,0} },
+		{ "no_carry",  {RL_ASM_TK_COND,{.cond=RL_COND_NO_CARRY},0,0} },
+		{ "NO_CARRY",  {RL_ASM_TK_COND,{.cond=RL_COND_NO_CARRY},0,0} },
+		{ "overflow",  {RL_ASM_TK_COND,{.cond=RL_COND_OVERFLOW},0,0} },
+		{ "OVERFLOW",  {RL_ASM_TK_COND,{.cond=RL_COND_OVERFLOW},0,0} },
+		{ "nonzero",   {RL_ASM_TK_COND,{.cond=RL_COND_NONZERO},0,0} },
+		{ "NONZERO",   {RL_ASM_TK_COND,{.cond=RL_COND_NONZERO},0,0} },
+		{ "pos",       {RL_ASM_TK_COND,{.cond=RL_COND_POS},0,0} },
+		{ "POS",       {RL_ASM_TK_COND,{.cond=RL_COND_POS},0,0} },
 		{ "equ",       {RL_ASM_TK_EQU,{0},0,0} },
 		{ "EQU",       {RL_ASM_TK_EQU,{0},0,0} },
 		{ ":",         {RL_ASM_TK_COLON,{0},0,0} },
@@ -1062,7 +1118,7 @@ rl_exec(struct node *n)
 	if(rld->caps & CAP_PORT_OUT) {
 #define HANDLE_PORT(PORT, BIT) \
 	rld->regs[RL_REG_STATUS] &= ~(BIT); \
-	if(port_write_available(PORT)) rld->regs[RL_REG_STATUS] |= (BIT);
+	if(! port_write_available(PORT)) rld->regs[RL_REG_STATUS] |= (BIT);
 		HANDLE_PORT(n->write_up, RL_STATUS_UP_OUT);
 		HANDLE_PORT(n->write_right, RL_STATUS_RIGHT_OUT);
 		HANDLE_PORT(n->write_down, RL_STATUS_DOWN_OUT);
@@ -1072,7 +1128,7 @@ rl_exec(struct node *n)
 	if(rld->caps & CAP_PORT_IN) {
 #define HANDLE_PORT(PORT, BIT) \
 	rld->regs[RL_REG_STATUS] &= ~(BIT); \
-	if(port_read_available(PORT)) rld->regs[RL_REG_STATUS] |= (BIT);
+	if(! port_read_available(PORT)) rld->regs[RL_REG_STATUS] |= (BIT);
 		HANDLE_PORT(n->read_up, RL_STATUS_UP_IN);
 		HANDLE_PORT(n->read_right, RL_STATUS_RIGHT_IN);
 		HANDLE_PORT(n->read_down, RL_STATUS_DOWN_IN);

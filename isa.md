@@ -152,7 +152,7 @@ The `LAST_PORT` internal register is initialized to UP. Reads and writes to unav
 | Bits  | Name     | Comments |
 | ----- | -------- | -------- |
 | [000] | Always   | Is always true |
-| [001] | Zero     | The Z flag is 1 |
+| [001] | Zro      | The Z flag is 1 |
 | [010] | Neg      | The N flag is 1 |
 | [011] | Carry    | The C flag is 1 |
 | [100] | No Carry | The C flag is 0 |

@@ -114,7 +114,7 @@ int main() {
 			if(asm_res.success) {
 				printf("OK\n");
 			} else {
-				printf("FAIL %u:%u - %63s\n", asm_res.line, asm_res.column, asm_res.reason);
+				printf("FAIL %u:%u - %.63s\n", asm_res.line, asm_res.column, asm_res.reason);
 			}
 		} else {
 			printf("ERROR unknown command: %s\n", cmd);
