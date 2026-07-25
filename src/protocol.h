@@ -1,0 +1,105 @@
+#ifndef PROTOCOL_H
+#define PROTOCOL_H
+
+#include <stdint.h>
+
+union protocol_request_header {
+	uint16_t words[2];
+	struct {
+		uint8_t length;
+		uint8_t type;
+		uint8_t id;
+		uint8_t data;
+	} data;
+};
+
+union protocol_response_header {
+	uint16_t word;
+	struct {
+		uint8_t id;
+		uint8_t length;
+	} data;
+};
+
+enum protocol_task_mutation {
+	PR_TSK_MUT_NONE, /* ignore B */
+	PR_TSK_MUT_ADD,
+	PR_TSK_MUT_SUB,
+	PR_TSK_MUT_AND,
+	PR_TSK_MUT_OR,
+	PR_TSK_MUT_MUL,
+	PR_TSK_MUT_DIV,
+	PR_TSK_MUT_MOD,
+	PR_TSK_MUT_NAND,
+	PR_TSK_MUT_NOR,
+	PR_TSK_MUT_XOR,
+	PR_TSK_MUT_XNOR,
+	PR_TSK_MUT_IMPL, /* for each bit, if either A is 0 or B is 1, output is 1; otherwise 0 */
+	PR_TSK_MUT_MAX, /* for each word, take the unsigned maximum of A and B */
+	PR_TSK_MUT_MIN, /* for each word, take the unsigned minimum of A and B */
+	PR_TSK_MUT_VERIFY_NE, /* if each word of A is not equal to the corresponding word of B, output A. Otherwise, output 1 word, the index of the first word of A equal to that of B */
+	PR_TSK_MUT_VERIFY_GREATER, /* if each word of A is greater (signed greater) than the corresponding word of B, output A. Otherwise, output 1 word, the index of the first word of A less or equal to that of B */
+	PR_TSK_MUT_VERIFY_LESS, /* if each word of A is less (signed less) than the corresponding word of B, output A. Otherwise, output 1 word, the index of the first word of A greater or equal to that of B */
+	PR_TSK_MUT_VERIFY_ABOVE, /* if each word of A is above (unsigned greater) than the corresponding word of B, output A. Otherwise, output 1 word, the index of the first word of A less or equal to that of B */
+	PR_TSK_MUT_VERIFY_BELOW, /* if each word of A is below (unsigned less) than the corresponding word of B, output A. Otherwise, output 1 word, the index of the first word of A above or equal to that of B */
+	PR_TSK_MUT_STRLEN, /* let strlen(number) be that number, and strlen(sequence) be min(sequence.length, first_index_of_a_0x0000_word). If strlen(A) <= strlen(B), output one word: strlen(A). Otherwise output one word: strlen(B) - strlen(A) */
+	PR_TSK_MUT_COMPRESSED, /* for each word of A, extract the high and low bytes of A. If the high byte isn't a defined request ID or its mutation is also COMPRESSED, output a word with the high byte equal to B's high byte and low byte equal to A's low byte. If it is, perform that request on a 1-length sequence A' equal to A's low byte and 1-length sequence B' equal to B's low byte, then output that */
+	NUM_PR_TSK_MUT
+};
+
+enum protocol_task_source {
+	PR_TSK_SRC_DATA, /* B is a sequence with length equal to A, with each word being the request data times 0x101 */
+	PR_TSK_SRC_INDIRECT, /* both A and B's length must match. B is sequence saved earlier with the index equal to the request data */
+	NUM_PR_TSK_SRC
+};
+
+enum protocol_task_destination {
+	PR_TSK_DST_RESPONSE, /* output to one of the response ports */
+	PR_TSK_DST_SAVE, /* save this request to be used later */
+	NUM_PR_TSK_DST
+};
+
+struct protocol_task {
+	uint8_t enabled;
+	uint8_t id;
+	enum protocol_task_mutation mut;
+	enum protocol_task_source src;
+	enum protocol_task_destination dst;
+};
+
+struct global_protocol {
+	struct protocol_task tasks[256];
+};
+
+struct sequence { uint8_t enabled; uint8_t len; uint16_t words[256]; };
+struct protocol_player_data {
+	struct sequence saved_sequences[256];
+	struct sequence expected_sequences[256];
+	uint8_t next_seq;
+};
+
+struct protocol_generator_output { uint16_t num; int eof; };
+struct protocol_request_generator {
+	uint16_t buffer[sizeof(union protocol_request_header)+256];
+	unsigned int length;
+	unsigned int idx;
+};
+
+struct protocol_response_validator {
+	union {
+		union protocol_response_header header;
+		uint16_t words[sizeof(union protocol_response_header)+256];
+	} buffer;
+	unsigned int idx;
+};
+
+struct global_protocol init_protocol();
+void mutate_protocol(struct global_protocol *gp, unsigned int points);
+struct protocol_player_data create_ppd();
+struct protocol_request_generator create_request_generator();
+struct protocol_generator_output run_request_generator(struct global_protocol *gp, struct protocol_player_data *ppd, struct protocol_request_generator *prg);
+struct protocol_response_validator create_response_validator();
+int run_response_validator(struct protocol_player_data *ppd, struct protocol_response_validator *prv, uint16_t next_byte);
+
+#endif
+

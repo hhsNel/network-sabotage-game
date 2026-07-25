@@ -14,6 +14,7 @@ struct port {
 	uint16_t value;
 };
 
+struct port create_port();
 int port_read_available(struct port *p);
 int port_write_available(struct port *p);
 uint16_t port_read(struct port *p);

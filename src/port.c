@@ -3,6 +3,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+struct port
+create_port() {
+	return (struct port){ PORT_EMPTY, 0 };
+}
+
 int
 port_read_available(struct port *p) {
 	if(! p) return 0;
