@@ -3,6 +3,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <inttypes.h>
+
+#include "platform/ui.h"
 
 static struct protocol_task generate_task(unsigned int points);
 static void generate_request(struct global_protocol *gp, struct protocol_player_data *ppd, struct protocol_request_generator *prg);
@@ -33,10 +36,22 @@ init_protocol() {
 void
 mutate_protocol(struct global_protocol *gp, unsigned int points) {
 	unsigned int id;
+	struct ui_protocol_entry ui_entries[256];
+	unsigned int num_entries;
 
 	id = 1 + rand() / ((RAND_MAX+1u)/255);
 	gp->tasks[id] = generate_task(points);
 	gp->tasks[id].id = id;
+
+	num_entries = 0;
+	for(id = 0; id < 256; ++id) {
+		if(gp->tasks[id].enabled) {
+			snprintf(ui_entries[num_entries].description, sizeof(ui_entries[num_entries].description),
+						"%" PRIu8 ": <DESCRIPTIONS TBD>", id);
+			ui_entries[num_entries++].style = UI_STYLE_DEFAULT;
+		}
+	}
+	ui_set_protocol(ui_entries, num_entries);
 }
 
 struct protocol_player_data
