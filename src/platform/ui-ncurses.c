@@ -66,8 +66,12 @@
 #define PROTOCOL_W 24
 #define INSPECT_W 32
 #define SHOP_ITEM_W 32
-#define BOARD_MIN_W 64
-#define BOARD_MIN_H 32
+#define CELL_W 8
+#define CELL_H 4
+#define CELL_TOTAL_W (CELL_W + 5)
+#define CELL_TOTAL_H (CELL_H + 2)
+#define BOARD_MIN_W (CELL_TOTAL_W * BOARD_SZ)
+#define BOARD_MIN_H (1 + CELL_TOTAL_H * BOARD_SZ)
 
 struct rect {
 	unsigned int x, y;
@@ -83,7 +87,7 @@ unsigned int num_shop_items, cap_shop_items;
 struct ui_protocol_entry *protocol_entries;
 unsigned int num_protocol_entries, cap_protocol_entries;
 
-struct ui_board_cell board[BOARD_SZ][BOARD_SZ];
+struct ui_board_cell board_cells[BOARD_SZ][BOARD_SZ];
 struct ui_port write_right_ports[BOARD_SZ-1][BOARD_SZ];
 struct ui_port write_left_ports[BOARD_SZ-1][BOARD_SZ];
 struct ui_port write_up_ports[BOARD_SZ][BOARD_SZ-1];
@@ -120,9 +124,15 @@ static unsigned int wrap_text(char *text, unsigned int max_width, char (*lines)[
 static unsigned int shop_item_height(struct ui_shop_item it);
 static void recompute_layout();
 static void draw_btn(unsigned int x, unsigned int y, struct ui_button btn, int is_selected);
+static void draw_cell(unsigned int x, unsigned int y, struct ui_board_cell cell, int is_selected);
+static void draw_port_up(unsigned int x, unsigned int y, struct ui_port port);
+static void draw_port_right(unsigned int x, unsigned int y, struct ui_port port);
+static void draw_port_down(unsigned int x, unsigned int y, struct ui_port port);
+static void draw_port_left(unsigned int x, unsigned int y, struct ui_port port);
 static void draw_misc();
 static void draw_shop();
 static void draw_protocol();
+static void draw_board();
 static void draw_inspect();
 static void move_focus(int key);
 
@@ -200,15 +210,13 @@ ui_set_shop_items(struct ui_shop_item *items, unsigned int num) {
 
 void
 ui_set_board(struct ui_board_cell board[BOARD_SZ][BOARD_SZ], struct ui_port write_right[BOARD_SZ-1][BOARD_SZ], struct ui_port write_left[BOARD_SZ-1][BOARD_SZ], struct ui_port write_up[BOARD_SZ][BOARD_SZ-1], struct ui_port write_down[BOARD_SZ][BOARD_SZ-1], struct ui_port request[BOARD_SZ], struct ui_port response[BOARD_SZ]) {
-	fprintf(stderr, "not implemented");
-	exit(1);
-	(void)board;
-	(void)write_right;
-	(void)write_left;
-	(void)write_up;
-	(void)write_down;
-	(void)request;
-	(void)response;
+	memcpy(board_cells, board, sizeof(board_cells));
+	memcpy(write_right_ports, write_right, sizeof(write_right_ports));
+	memcpy(write_left_ports, write_left, sizeof(write_left_ports));
+	memcpy(write_up_ports, write_up, sizeof(write_up_ports));
+	memcpy(write_down_ports, write_down, sizeof(write_down_ports));
+	memcpy(request_ports, request, sizeof(request_ports));
+	memcpy(response_ports, response, sizeof(response_ports));
 }
 
 void
@@ -263,7 +271,7 @@ ui_flush() {
 	draw_misc();
 	draw_shop();
 	draw_protocol();
-	/* TODO: draw_board(); */
+	draw_board();
 	draw_inspect();
 
 	snprintf(buf, sizeof(buf), "Network Sabotage Alpha | Region: %d | Pending: %d", (int)current_focus, (int)pending);
@@ -424,7 +432,7 @@ wrap_text(char *text, unsigned int max_width, char (*lines)[256], unsigned int c
 		if(lf > text + max_width) lf = text + max_width;
 
 		line_end = lf;
-		while(*line_end != ' ') {
+		while(*line_end != ' ' && *line_end != '\n') {
 			if(line_end == text) {
 				line_end = lf;
 				break;
@@ -434,7 +442,8 @@ wrap_text(char *text, unsigned int max_width, char (*lines)[256], unsigned int c
 
 		strncpy(lines[num_lines], text, line_end - text);
 		lines[num_lines++][line_end - text] = '\0';
-		text = line_end + 1;
+		if(*line_end == ' ' || *line_end == '\n') text = line_end + 1;
+		else text = line_end;
 	}
 
 	return num_lines;
@@ -520,6 +529,48 @@ draw_btn(unsigned int x, unsigned int y, struct ui_button btn, int is_selected) 
 }
 
 static void
+draw_cell(unsigned int x, unsigned int y, struct ui_board_cell cell, int is_selected) {
+	unsigned int i, num_lines;
+	char lines[CELL_H][256];
+
+	num_lines = wrap_text(cell.status, CELL_W, lines, CELL_H);
+	set_style(cell.style, is_selected);
+	for(i = 0; i < num_lines; ++i) {
+		mvprintw(y+i, x, "%-.*s", CELL_W, lines[i]);
+	}
+}
+
+static void
+draw_port_up(unsigned int x, unsigned int y, struct ui_port port) {
+	set_style(port.style, 0);
+	mvprintw(y, x, "^%c%c  %c%c^", port.status[0][0], port.status[0][1], port.status[1][0], port.status[1][1]);
+}
+
+static void
+draw_port_right(unsigned int x, unsigned int y, struct ui_port port) {
+	set_style(port.style, 0);
+	mvprintw(y+0, x, ">>");
+	mvprintw(y+1, x, "%c%c", port.status[0][0], port.status[0][1]);
+	mvprintw(y+2, x, "%c%c", port.status[0][0], port.status[0][1]);
+	mvprintw(y+3, x, ">>");
+}
+
+static void
+draw_port_down(unsigned int x, unsigned int y, struct ui_port port) {
+	set_style(port.style, 0);
+	mvprintw(y, x, "V%c%c  %c%cV", port.status[0][0], port.status[0][1], port.status[1][0], port.status[1][1]);
+}
+
+static void
+draw_port_left(unsigned int x, unsigned int y, struct ui_port port) {
+	set_style(port.style, 0);
+	mvprintw(y+0, x, "<<");
+	mvprintw(y+1, x, "%c%c", port.status[0][0], port.status[0][1]);
+	mvprintw(y+2, x, "%c%c", port.status[0][0], port.status[0][1]);
+	mvprintw(y+3, x, "<<");
+}
+
+static void
 draw_misc() {
 	unsigned int i;
 
@@ -583,6 +634,51 @@ draw_protocol() {
 }
 
 static void
+draw_board() {
+	unsigned int i, j;
+
+	draw_header(board_rect, "BOARD", current_focus == UI_REGION_BOARD);
+
+	for(i = 0; i < BOARD_SZ; ++i) {
+		for(j = BOARD_SZ - 1; j < BOARD_SZ; --j) {
+			draw_cell(3 + board_rect.x + CELL_TOTAL_W*i,
+					2 + board_rect.y + CELL_TOTAL_H*j,
+					board_cells[i][j],
+					board_x == i && board_y == j);
+		}
+	}
+	
+	for(i = 0; i < BOARD_SZ; ++i) {
+		for(j = BOARD_SZ - 2; j < BOARD_SZ; --j) {
+			draw_port_up(3 + board_rect.x + CELL_TOTAL_W*i,
+					1 + board_rect.y + CELL_TOTAL_H*(j+1),
+					write_up_ports[i][j]);
+			draw_port_down(3 + board_rect.x + CELL_TOTAL_W*i,
+					CELL_TOTAL_H + board_rect.y + CELL_TOTAL_H*j,
+					write_down_ports[i][j]);
+		}
+	}
+	for(i = 0; i < BOARD_SZ-1; ++i) {
+		for(j = BOARD_SZ - 1; j < BOARD_SZ; --j) {
+			draw_port_right(CELL_TOTAL_W-2 + board_rect.x + CELL_TOTAL_W*i,
+					2 + board_rect.y + CELL_TOTAL_H*j,
+					write_right_ports[i][j]);
+			draw_port_left(1 + board_rect.x + CELL_TOTAL_W*(i+1),
+					2 + board_rect.y + CELL_TOTAL_H*j,
+					write_left_ports[i][j]);
+		}
+	}
+	for(i = 0; i < BOARD_SZ; ++i) {
+		draw_port_up(3 + board_rect.x + CELL_TOTAL_W*i,
+				1 + board_rect.y,
+				response_ports[i]);
+		draw_port_up(3 + board_rect.x + CELL_TOTAL_W*i,
+				CELL_TOTAL_H + board_rect.y + CELL_TOTAL_H*(BOARD_SZ-1),
+				request_ports[i]);
+	}
+}
+
+static void
 draw_inspect() {
 	unsigned int i;
 	unsigned int num_lines;
@@ -623,7 +719,6 @@ move_focus(int key) {
 			return;
 		case 'j':
 			current_focus = UI_REGION_BOARD;
-			board_x = board_y = 0;
 			return;
 		}
 		break;
@@ -635,7 +730,6 @@ move_focus(int key) {
 			return;
 		case 'l':
 			current_focus = UI_REGION_BOARD;
-			board_x = board_y = 0;
 			return;
 		}
 		break;
@@ -658,7 +752,6 @@ move_focus(int key) {
 		switch(key) {
 		case 'h':
 			current_focus = UI_REGION_BOARD;
-			board_x = board_y = 0;
 			return;
 		case 'k':
 			current_focus = UI_REGION_SHOP;
@@ -679,7 +772,6 @@ move_focus(int key) {
 			return;
 		case UI_REGION_PROTOCOL:
 			current_focus = UI_REGION_BOARD;
-			board_x = board_y = 0;
 			return;
 		case UI_REGION_BOARD:
 			current_focus = UI_REGION_INSPECT;

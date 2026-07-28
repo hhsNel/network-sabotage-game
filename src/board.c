@@ -36,10 +36,15 @@ init_board(struct board *b) {
 void
 update_board(struct board *b) {
 	unsigned int i, j;
+	struct ui_board_cell ui_board[BOARD_SZ][BOARD_SZ];
+	struct ui_port ui_right[BOARD_SZ-1][BOARD_SZ], ui_left[BOARD_SZ-1][BOARD_SZ], ui_up[BOARD_SZ][BOARD_SZ-1], ui_down[BOARD_SZ][BOARD_SZ-1];
+	struct ui_port ui_request[BOARD_SZ], ui_response[BOARD_SZ];
 
 	for(i = 0; i < BOARD_SZ; ++i) {
 		for(j = 0; j < BOARD_SZ; ++j) {
 			b->nodes[i][j].update(&b->nodes[i][j]);
+			if(b->nodes[i][j].render) ui_board[i][j] = b->nodes[i][j].render(&b->nodes[i][j]);
+			else ui_board[i][j] = (struct ui_board_cell){"EMPTY\nEMPTY\nEMPTY\nEMPTY",UI_STYLE_DEFAULT};
 		}
 	}
 
@@ -47,18 +52,26 @@ update_board(struct board *b) {
 		for(j = 0; j < BOARD_SZ; ++j) {
 			update_port(&b->write_right_ports[i][j]);
 			update_port(&b->write_left_ports[i][j]);
+			ui_right[i][j] = render_port(&b->write_right_ports[i][j]);
+			ui_left[i][j] = render_port(&b->write_left_ports[i][j]);
 		}
 	}
 	for(i = 0; i < BOARD_SZ; ++i) {
 		for(j = 0; j < BOARD_SZ - 1; ++j) {
 			update_port(&b->write_up_ports[i][j]);
 			update_port(&b->write_down_ports[i][j]);
+			ui_up[i][j] = render_port(&b->write_up_ports[i][j]);
+			ui_down[i][j] = render_port(&b->write_down_ports[i][j]);
 		}
 	}
 	for(i = 0; i < BOARD_SZ; ++i) {
 		update_port(&b->request_ports[i]);
 		update_port(&b->response_ports[i]);
+		ui_request[i] = render_port(&b->request_ports[i]);
+		ui_response[i] = render_port(&b->response_ports[i]);
 	}
+
+	ui_set_board(ui_board, ui_right, ui_left, ui_up, ui_down, ui_request, ui_response);
 }
 
 void

@@ -2,11 +2,13 @@
 #define NODE_H
 
 #include "port.h"
+#include "platform/ui.h"
 
 struct node {
 	struct port *read_up, *read_right, *read_down, *read_left;
 	struct port *write_up, *write_right, *write_down, *write_left;
 	void (*update)(struct node *);
+	struct ui_board_cell (*render)(struct node *);
 	void (*destroy)(struct node *);
 	void *data;
 };

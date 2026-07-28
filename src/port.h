@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#include "platform/ui.h"
+
 enum port_state {
 	PORT_EMPTY, /* no data */
 	PORT_FULL, /* data */
@@ -20,6 +22,7 @@ int port_write_available(struct port *p);
 uint16_t port_read(struct port *p);
 void port_write(struct port *p, uint16_t data);
 void update_port(struct port *p);
+struct ui_port render_port(struct port *p);
 
 #endif
 

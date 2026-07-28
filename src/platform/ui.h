@@ -1,7 +1,7 @@
 #ifndef PLATFORM_UI_H
 #define PLATFORM_UI_H
 
-#include "board.h"
+#include "util.h"
 
 #include <stdint.h>
 

@@ -13,6 +13,7 @@ create_empty_node() {
 
 	n.update = do_nothing;
 	n.destroy = do_nothing;
+	n.render = NULL;
 	n.data = NULL;
 
 	return n;

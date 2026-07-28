@@ -1,10 +1,9 @@
 #ifndef BOARD_H
 #define BOARD_H
 
+#include "util.h"
 #include "node.h"
 #include "port.h"
-
-#define BOARD_SZ 8
 
 struct board {
 	struct node nodes[BOARD_SZ][BOARD_SZ];
