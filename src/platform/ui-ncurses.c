@@ -101,7 +101,7 @@ char *inspect_text;
 unsigned int cap_inspect_text;
 
 enum ui_region current_focus;
-unsigned int region_selected, region_scroll;
+unsigned int region_selected, *max_selection, region_scroll;
 unsigned int board_x, board_y;
 
 enum kb_state { PENDING_NONE, PENDING_C_W, PENDING_G };
@@ -344,8 +344,10 @@ ui_poll(int ms) {
 		return (struct ui_event){UI_EVENT_NONE, current_focus, {0}};
 	case 'j':
 		if(current_focus != UI_REGION_BOARD) {
-			++region_selected;
-			++region_scroll;
+			if(region_selected != *max_selection-1) {
+				++region_selected;
+				++region_scroll;
+			}
 		} else {
 			if(board_y < BOARD_SZ-1) ++board_y;
 		}
@@ -360,8 +362,10 @@ ui_poll(int ms) {
 		return (struct ui_event){UI_EVENT_NONE, current_focus, {0}};
 	case 'l':
 		if(current_focus != UI_REGION_BOARD) {
-			++region_selected;
-			++region_scroll;
+			if(region_selected != *max_selection-1) {
+				++region_selected;
+				++region_scroll;
+			}
 		} else {
 			if(board_x < BOARD_SZ-1) ++board_x;
 		}
@@ -704,10 +708,13 @@ move_focus(int key) {
 		switch(key) {
 		case 'j':
 			current_focus = UI_REGION_PROTOCOL;
+			region_selected = region_scroll = 0;
+			max_selection = &num_protocol_entries;
 			return;
 		case 'l':
 			current_focus = UI_REGION_SHOP;
 			region_selected = region_scroll = 0;
+			max_selection = &num_shop_items;
 			return;
 		}
 		break;
@@ -716,6 +723,7 @@ move_focus(int key) {
 		case 'h':
 			current_focus = UI_REGION_MISC;
 			region_selected = region_scroll = 0;
+			max_selection = &num_misc_buttons;
 			return;
 		case 'j':
 			current_focus = UI_REGION_BOARD;
@@ -727,6 +735,7 @@ move_focus(int key) {
 		case 'k':
 			current_focus = UI_REGION_MISC;
 			region_selected = region_scroll = 0;
+			max_selection = &num_misc_buttons;
 			return;
 		case 'l':
 			current_focus = UI_REGION_BOARD;
@@ -737,14 +746,18 @@ move_focus(int key) {
 		switch(key) {
 		case 'h':
 			current_focus = UI_REGION_PROTOCOL;
+			region_selected = region_scroll = 0;
+			max_selection = &num_protocol_entries;
 			return;
 		case 'k':
 			current_focus = UI_REGION_SHOP;
 			region_selected = region_scroll = 0;
+			max_selection = &num_shop_items;
 			return;
 		case 'l':
 			current_focus = UI_REGION_INSPECT;
 			region_selected = region_scroll = 0;
+			max_selection = &num_inspect_buttons;
 			return;
 		}
 		break;
@@ -756,6 +769,7 @@ move_focus(int key) {
 		case 'k':
 			current_focus = UI_REGION_SHOP;
 			region_selected = region_scroll = 0;
+			max_selection = &num_shop_items;
 			return;
 		}
 		break;
@@ -766,9 +780,12 @@ move_focus(int key) {
 		case UI_REGION_MISC:
 			current_focus = UI_REGION_SHOP;
 			region_selected = region_scroll = 0;
+			max_selection = &num_shop_items;
 			return;
 		case UI_REGION_SHOP:
 			current_focus = UI_REGION_PROTOCOL;
+			region_selected = region_scroll = 0;
+			max_selection = &num_protocol_entries;
 			return;
 		case UI_REGION_PROTOCOL:
 			current_focus = UI_REGION_BOARD;
@@ -776,10 +793,12 @@ move_focus(int key) {
 		case UI_REGION_BOARD:
 			current_focus = UI_REGION_INSPECT;
 			region_selected = region_scroll = 0;
+			max_selection = &num_inspect_buttons;
 			return;
 		case UI_REGION_INSPECT:
 			current_focus = UI_REGION_MISC;
 			region_selected = region_scroll = 0;
+			max_selection = &num_misc_buttons;
 			return;
 		}
 	}
