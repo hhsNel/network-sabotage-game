@@ -19,12 +19,21 @@ int main() {
 	char assembly_buffer[4096];
 	size_t assembly_sz;
 	struct assembly_result asm_res;
+	struct port ports[4];
 
 	rl = create_rl_computer(0);
 	cd = rl.data;
 	rld = cd->data;
+	ports[0] = create_port();
+	ports[1] = create_port();
+	ports[2] = create_port();
+	ports[3] = create_port();
 
 	rld->caps = -1; /* hack to enable all instructions */
+	rl.read_up = rl.write_down = &ports[0];
+	rl.read_right = rl.write_left = &ports[1];
+	rl.read_down = rl.write_up = &ports[2];
+	rl.read_left = rl.write_right = &ports[3];
 
 	printf("READY\n");
 	while(1) {
@@ -32,9 +41,17 @@ int main() {
 
 		if(strcmp(cmd, "reset") == 0) {
 			cd->reset(&rl);
+			ports[0] = create_port();
+			ports[1] = create_port();
+			ports[2] = create_port();
+			ports[3] = create_port();
 			printf("OK\n");
 		} else if(strcmp(cmd, "exec") == 0) {
 			cd->exec(&rl);
+			update_port(&ports[0]);
+			update_port(&ports[1]);
+			update_port(&ports[2]);
+			update_port(&ports[3]);
 			printf("OK\n");
 		} else if(strcmp(cmd, "pc") == 0) {
 			printf("OK %zu\n", cd->pc);

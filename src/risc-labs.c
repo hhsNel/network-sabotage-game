@@ -557,7 +557,7 @@ rl_asm(uint8_t *out_buf, size_t out_size, char *in_str)
 			} \
 			opcode_bitmask = ((1 << instr_records[i].shape.operands[IDX].bit_width) - 1); \
 			if( (instr_part & opcode_bitmask) != instr_part && \
-				(instr_part & ~opcode_bitmask) != ~opcode_bitmask ) { \
+				(instr_part & (uint16_t)~opcode_bitmask) != (uint16_t)~opcode_bitmask ) { \
 				res.success = 0; \
 				res.line = instr_records[i].operands[IDX].line; \
 				res.column = instr_records[i].operands[IDX].column; \

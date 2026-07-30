@@ -259,12 +259,14 @@ ui_set_inspect(struct ui_button *btns, unsigned int btn_nr, char *text) {
 
 void
 ui_flush() {
-	erase();
 	char buf[256];
+
+	erase();
 
 	recompute_layout();
 	if(board_rect.w < BOARD_MIN_W || board_rect.h < BOARD_MIN_H) {
 		mvprintw(0, 0, "Board too small (%ux%u). Please resize window.", board_rect.w, board_rect.h);
+		refresh();
 		return;
 	}
 

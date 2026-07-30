@@ -111,10 +111,10 @@ run_response_validator(struct protocol_player_data *ppd, struct protocol_respons
 
 	prv->buffer.words[prv->idx++] = next_byte;
 
-	if(prv->idx >= 2 && prv->idx - 2 == prv->buffer.header.data.length) {
+	if(prv->idx >= 1 && prv->idx - 1 == prv->buffer.header.data.length) {
 		if( ppd->expected_sequences[prv->buffer.header.data.id].enabled &&
 			prv->buffer.header.data.length == ppd->expected_sequences[prv->buffer.header.data.id].len &&
-			memcmp(&prv->buffer.words[2],
+			memcmp(&prv->buffer.words[1],
 					ppd->expected_sequences[prv->buffer.header.data.id].words,
 					prv->buffer.header.data.length) == 0 ) {
 			ret_val = 1;

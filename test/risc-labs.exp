@@ -139,7 +139,7 @@ assert_eq [dump 2 2] "00 20" "MOV assembled correctly"
 do_exec
 do_exec
 assert_eq [get_pc] 4 "pc advanced"
-assert_eq [get_regs] "0101 0101 0000 0000 0000 0000 ff00" "MOV executed"
+assert_eq [get_regs] "0101 0101 0000 0000 0000 0000 f000" "MOV executed"
 
 do_reset
 assert_eq [assemble {
@@ -152,7 +152,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "0004 0001 0003 0000 0000 0000 ff00" "ADD executed"
+assert_eq [get_regs] "0004 0001 0003 0000 0000 0000 f000" "ADD executed"
 
 do_reset
 assert_eq [assemble {
@@ -165,7 +165,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "0000 0001 ffff 0000 0000 0000 ff05" "ADD 2 executed"
+assert_eq [get_regs] "0000 0001 ffff 0000 0000 0000 f005" "ADD 2 executed"
 
 do_reset
 assert_eq [assemble {
@@ -178,7 +178,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "ffff 0001 fffe 0000 0000 0000 ff02" "ADD 3 executed"
+assert_eq [get_regs] "ffff 0001 fffe 0000 0000 0000 f002" "ADD 3 executed"
 
 do_reset
 assert_eq [assemble {
@@ -193,7 +193,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 8 "pc advanced"
-assert_eq [get_regs] "8000 0001 7fff 0000 0000 0000 ff0a" "ADD 4 executed"
+assert_eq [get_regs] "8000 0001 7fff 0000 0000 0000 f00a" "ADD 4 executed"
 
 do_reset
 assert_eq [assemble {
@@ -206,7 +206,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "0001 0002 0001 0000 0000 0000 ff00" "SUB executed"
+assert_eq [get_regs] "0001 0002 0001 0000 0000 0000 f000" "SUB executed"
 
 do_reset
 assert_eq [assemble {
@@ -219,7 +219,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "0000 0001 0001 0000 0000 0000 ff01" "SUB 2 executed"
+assert_eq [get_regs] "0000 0001 0001 0000 0000 0000 f001" "SUB 2 executed"
 
 do_reset
 assert_eq [assemble {
@@ -232,7 +232,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "ffff 0001 0002 0000 0000 0000 ff06" "SUB 3 executed"
+assert_eq [get_regs] "ffff 0001 0002 0000 0000 0000 f006" "SUB 3 executed"
 
 do_reset
 assert_eq [assemble {
@@ -247,7 +247,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 8 "pc advanced"
-assert_eq [get_regs] "7fff 8000 0001 0000 0000 0000 ff08" "SUB 4 executed"
+assert_eq [get_regs] "7fff 8000 0001 0000 0000 0000 f008" "SUB 4 executed"
 
 do_reset
 assert_eq [assemble {
@@ -260,7 +260,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "0010 0002 0008 0000 0000 0000 ff00" "MUL executed"
+assert_eq [get_regs] "0010 0002 0008 0000 0000 0000 f000" "MUL executed"
 
 do_reset
 assert_eq [assemble {
@@ -273,7 +273,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "0000 0000 0008 0000 0000 0000 ff01" "MUL 2 executed"
+assert_eq [get_regs] "0000 0000 0008 0000 0000 0000 f001" "MUL 2 executed"
 
 do_reset
 assert_eq [assemble {
@@ -286,7 +286,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "8000 0100 0080 0000 0000 0000 ff02" "MUL 3 executed"
+assert_eq [get_regs] "8000 0100 0080 0000 0000 0000 f002" "MUL 3 executed"
 
 do_reset
 assert_eq [assemble {
@@ -299,7 +299,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "0002 0017 0008 0000 0000 0000 ff00" "DIV executed"
+assert_eq [get_regs] "0002 0017 0008 0000 0000 0000 f000" "DIV executed"
 
 do_reset
 assert_eq [assemble {
@@ -312,7 +312,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "0000 0000 0008 0000 0000 0000 ff01" "DIV 2 executed"
+assert_eq [get_regs] "0000 0000 0008 0000 0000 0000 f001" "DIV 2 executed"
 
 do_reset
 assert_eq [assemble {
@@ -325,7 +325,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "0000 0017 0000 0000 0000 0000 ff01" "DIV 3 executed"
+assert_eq [get_regs] "0000 0017 0000 0000 0000 0000 f001" "DIV 3 executed"
 
 do_reset
 assert_eq [assemble {
@@ -338,7 +338,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "ffff fffe 0002 0000 0000 0000 ff02" "DIV 4 executed"
+assert_eq [get_regs] "ffff fffe 0002 0000 0000 0000 f002" "DIV 4 executed"
 
 do_reset
 assert_eq [assemble {
@@ -351,7 +351,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "0007 0017 0008 0000 0000 0000 ff00" "MOD executed"
+assert_eq [get_regs] "0007 0017 0008 0000 0000 0000 f000" "MOD executed"
 
 do_reset
 assert_eq [assemble {
@@ -364,7 +364,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "0000 0018 0008 0000 0000 0000 ff01" "MOD 2 executed"
+assert_eq [get_regs] "0000 0018 0008 0000 0000 0000 f001" "MOD 2 executed"
 
 do_reset
 assert_eq [assemble {
@@ -377,7 +377,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "0000 0017 0000 0000 0000 0000 ff01" "MOD 3 executed"
+assert_eq [get_regs] "0000 0017 0000 0000 0000 0000 f001" "MOD 3 executed"
 
 do_reset
 assert_eq [assemble {
@@ -390,7 +390,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "ffff fff7 0008 0000 0000 0000 ff02" "MOD 4 executed"
+assert_eq [get_regs] "ffff fff7 0008 0000 0000 0000 f002" "MOD 4 executed"
 
 do_reset
 assert_eq [assemble {
@@ -403,7 +403,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "0001 ff55 00ab 0000 0000 0000 ff00" "AND executed"
+assert_eq [get_regs] "0001 ff55 00ab 0000 0000 0000 f000" "AND executed"
 
 do_reset
 assert_eq [assemble {
@@ -416,7 +416,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "0000 ff55 00aa 0000 0000 0000 ff01" "AND 2 executed"
+assert_eq [get_regs] "0000 ff55 00aa 0000 0000 0000 f001" "AND 2 executed"
 
 do_reset
 assert_eq [assemble {
@@ -429,7 +429,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "ff00 ffff ff00 0000 0000 0000 ff02" "AND 3 executed"
+assert_eq [get_regs] "ff00 ffff ff00 0000 0000 0000 f002" "AND 3 executed"
 
 do_reset
 assert_eq [assemble {
@@ -442,7 +442,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "ffff ff55 00aa 0000 0000 0000 ff02" "OR executed"
+assert_eq [get_regs] "ffff ff55 00aa 0000 0000 0000 f002" "OR executed"
 
 do_reset
 assert_eq [assemble {
@@ -455,7 +455,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "fffe ff54 00aa 0000 0000 0000 ff02" "OR 2 executed"
+assert_eq [get_regs] "fffe ff54 00aa 0000 0000 0000 f002" "OR 2 executed"
 
 do_reset
 assert_eq [assemble {
@@ -468,7 +468,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "0000 0000 0000 0000 0000 0000 ff01" "OR 3 executed"
+assert_eq [get_regs] "0000 0000 0000 0000 0000 0000 f001" "OR 3 executed"
 
 do_reset
 assert_eq [assemble {
@@ -481,7 +481,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "fffe ff55 00ab 0000 0000 0000 ff02" "NAND executed"
+assert_eq [get_regs] "fffe ff55 00ab 0000 0000 0000 f002" "NAND executed"
 
 do_reset
 assert_eq [assemble {
@@ -494,7 +494,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "ffff ff55 00aa 0000 0000 0000 ff02" "NAND 2 executed"
+assert_eq [get_regs] "ffff ff55 00aa 0000 0000 0000 f002" "NAND 2 executed"
 
 do_reset
 assert_eq [assemble {
@@ -507,7 +507,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "00ff ff55 ffaa 0000 0000 0000 ff00" "NAND 3 executed"
+assert_eq [get_regs] "00ff ff55 ffaa 0000 0000 0000 f000" "NAND 3 executed"
 
 do_reset
 assert_eq [assemble {
@@ -520,7 +520,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "0000 ffff ffff 0000 0000 0000 ff01" "NAND 4 executed"
+assert_eq [get_regs] "0000 ffff ffff 0000 0000 0000 f001" "NAND 4 executed"
 
 do_reset
 assert_eq [assemble {
@@ -533,7 +533,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "0000 ff55 00aa 0000 0000 0000 ff01" "NOR executed"
+assert_eq [get_regs] "0000 ff55 00aa 0000 0000 0000 f001" "NOR executed"
 
 do_reset
 assert_eq [assemble {
@@ -546,7 +546,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "0001 ff54 00aa 0000 0000 0000 ff00" "NOR 2 executed"
+assert_eq [get_regs] "0001 ff54 00aa 0000 0000 0000 f000" "NOR 2 executed"
 
 do_reset
 assert_eq [assemble {
@@ -559,7 +559,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "ffff 0000 0000 0000 0000 0000 ff02" "NOR 3 executed"
+assert_eq [get_regs] "ffff 0000 0000 0000 0000 0000 f002" "NOR 3 executed"
 
 do_reset
 assert_eq [assemble {
@@ -572,7 +572,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "ffff ff55 00aa 0000 0000 0000 ff02" "XOR executed"
+assert_eq [get_regs] "ffff ff55 00aa 0000 0000 0000 f002" "XOR executed"
 
 do_reset
 assert_eq [assemble {
@@ -585,7 +585,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "0000 ff0f ff0f 0000 0000 0000 ff01" "XOR 2 executed"
+assert_eq [get_regs] "0000 ff0f ff0f 0000 0000 0000 f001" "XOR 2 executed"
 
 do_reset
 assert_eq [assemble {
@@ -598,7 +598,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "00bf 00ff 0040 0000 0000 0000 ff00" "XOR 3 executed"
+assert_eq [get_regs] "00bf 00ff 0040 0000 0000 0000 f000" "XOR 3 executed"
 
 do_reset
 assert_eq [assemble {
@@ -611,7 +611,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "0000 ff55 00aa 0000 0000 0000 ff01" "XNOR executed"
+assert_eq [get_regs] "0000 ff55 00aa 0000 0000 0000 f001" "XNOR executed"
 
 do_reset
 assert_eq [assemble {
@@ -624,7 +624,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "ffff ff0f ff0f 0000 0000 0000 ff02" "XNOR 2 executed"
+assert_eq [get_regs] "ffff ff0f ff0f 0000 0000 0000 f002" "XNOR 2 executed"
 
 do_reset
 assert_eq [assemble {
@@ -637,7 +637,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "ff40 00ff 0040 0000 0000 0000 ff02" "XNOR 3 executed"
+assert_eq [get_regs] "ff40 00ff 0040 0000 0000 0000 f002" "XNOR 3 executed"
 
 do_reset
 assert_eq [assemble {
@@ -648,7 +648,7 @@ assert_eq [dump 2 2] "20 28" "SHL assembled correctly"
 do_exec
 do_exec
 assert_eq [get_pc] 4 "pc advanced"
-assert_eq [get_regs] "8800 0088 0000 0000 0000 0000 ff02" "SHL executed"
+assert_eq [get_regs] "8800 0088 0000 0000 0000 0000 f002" "SHL executed"
 
 do_reset
 assert_eq [assemble {
@@ -659,7 +659,7 @@ assert_eq [dump 2 2] "20 29" "SHL 2 assembled correctly"
 do_exec
 do_exec
 assert_eq [get_pc] 4 "pc advanced"
-assert_eq [get_regs] "1000 0088 0000 0000 0000 0000 ff04" "SHL 2 executed"
+assert_eq [get_regs] "1000 0088 0000 0000 0000 0000 f004" "SHL 2 executed"
 
 do_reset
 assert_eq [assemble {
@@ -670,7 +670,7 @@ assert_eq [dump 2 2] "20 2d" "SHL 3 assembled correctly"
 do_exec
 do_exec
 assert_eq [get_pc] 4 "pc advanced"
-assert_eq [get_regs] "0000 0088 0000 0000 0000 0000 ff05" "SHL 3 executed"
+assert_eq [get_regs] "0000 0088 0000 0000 0000 0000 f005" "SHL 3 executed"
 
 do_reset
 assert_eq [assemble {
@@ -681,7 +681,7 @@ assert_eq [dump 2 2] "20 2e" "SHL 4 assembled correctly"
 do_exec
 do_exec
 assert_eq [get_pc] 4 "pc advanced"
-assert_eq [get_regs] "0000 0088 0000 0000 0000 0000 ff01" "SHL 4 executed"
+assert_eq [get_regs] "0000 0088 0000 0000 0000 0000 f001" "SHL 4 executed"
 
 do_reset
 assert_eq [assemble {
@@ -692,7 +692,7 @@ assert_eq [dump 2 2] "20 33" "SHR assembled correctly"
 do_exec
 do_exec
 assert_eq [get_pc] 4 "pc advanced"
-assert_eq [get_regs] "0011 0088 0000 0000 0000 0000 ff00" "SHR executed"
+assert_eq [get_regs] "0011 0088 0000 0000 0000 0000 f000" "SHR executed"
 
 do_reset
 assert_eq [assemble {
@@ -703,7 +703,7 @@ assert_eq [dump 2 2] "20 34" "SHR 2 assembled correctly"
 do_exec
 do_exec
 assert_eq [get_pc] 4 "pc advanced"
-assert_eq [get_regs] "0008 0088 0000 0000 0000 0000 ff04" "SHR 2 executed"
+assert_eq [get_regs] "0008 0088 0000 0000 0000 0000 f004" "SHR 2 executed"
 
 do_reset
 assert_eq [assemble {
@@ -714,7 +714,7 @@ assert_eq [dump 2 2] "20 38" "SHR 3 assembled correctly"
 do_exec
 do_exec
 assert_eq [get_pc] 4 "pc advanced"
-assert_eq [get_regs] "0000 0088 0000 0000 0000 0000 ff05" "SHR 3 executed"
+assert_eq [get_regs] "0000 0088 0000 0000 0000 0000 f005" "SHR 3 executed"
 
 do_reset
 assert_eq [assemble {
@@ -725,7 +725,7 @@ assert_eq [dump 2 2] "20 39" "SHR 4 assembled correctly"
 do_exec
 do_exec
 assert_eq [get_pc] 4 "pc advanced"
-assert_eq [get_regs] "0000 0088 0000 0000 0000 0000 ff01" "SHR 4 executed"
+assert_eq [get_regs] "0000 0088 0000 0000 0000 0000 f001" "SHR 4 executed"
 
 do_reset
 assert_eq [assemble {
@@ -738,7 +738,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "0011 0088 0003 0000 0000 0000 ff00" "BSH executed"
+assert_eq [get_regs] "0011 0088 0003 0000 0000 0000 f000" "BSH executed"
 
 do_reset
 assert_eq [assemble {
@@ -751,7 +751,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "0008 0088 0004 0000 0000 0000 ff04" "BSH 2 executed"
+assert_eq [get_regs] "0008 0088 0004 0000 0000 0000 f004" "BSH 2 executed"
 
 do_reset
 assert_eq [assemble {
@@ -764,7 +764,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "0001 0088 0007 0000 0000 0000 ff00" "BSH 3 executed"
+assert_eq [get_regs] "0001 0088 0007 0000 0000 0000 f000" "BSH 3 executed"
 
 do_reset
 assert_eq [assemble {
@@ -777,7 +777,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "0000 0088 0008 0000 0000 0000 ff05" "BSH 4 executed"
+assert_eq [get_regs] "0000 0088 0008 0000 0000 0000 f005" "BSH 4 executed"
 
 do_reset
 assert_eq [assemble {
@@ -790,7 +790,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "0110 0088 ffff 0000 0000 0000 ff00" "BSH 5 executed"
+assert_eq [get_regs] "0110 0088 ffff 0000 0000 0000 f000" "BSH 5 executed"
 
 do_reset
 assert_eq [assemble {
@@ -803,7 +803,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "8800 0088 fff8 0000 0000 0000 ff02" "BSH 6 executed"
+assert_eq [get_regs] "8800 0088 fff8 0000 0000 0000 f002" "BSH 6 executed"
 
 do_reset
 assert_eq [assemble {
@@ -816,7 +816,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "1000 0088 fff7 0000 0000 0000 ff04" "BSH 6 executed"
+assert_eq [get_regs] "1000 0088 fff7 0000 0000 0000 f004" "BSH 6 executed"
 
 do_reset
 assert_eq [assemble {
@@ -829,7 +829,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "8000 0088 fff4 0000 0000 0000 ff02" "BSH 7 executed"
+assert_eq [get_regs] "8000 0088 fff4 0000 0000 0000 f002" "BSH 7 executed"
 
 do_reset
 assert_eq [assemble {
@@ -842,7 +842,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "0000 0088 fff3 0000 0000 0000 ff05" "BSH 8 executed"
+assert_eq [get_regs] "0000 0088 fff3 0000 0000 0000 f005" "BSH 8 executed"
 
 do_reset
 assert_eq [assemble {
@@ -855,7 +855,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "1ff1 ff88 0003 0000 0000 0000 ff00" "BSH 9 executed"
+assert_eq [get_regs] "1ff1 ff88 0003 0000 0000 0000 f000" "BSH 9 executed"
 
 do_reset
 assert_eq [assemble {
@@ -868,7 +868,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "0ff8 ff88 0004 0000 0000 0000 ff04" "BSH 10 executed"
+assert_eq [get_regs] "0ff8 ff88 0004 0000 0000 0000 f004" "BSH 10 executed"
 
 do_reset
 assert_eq [assemble {
@@ -881,7 +881,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "0011 0088 0003 0000 0000 0000 ff00" "ABSH executed"
+assert_eq [get_regs] "0011 0088 0003 0000 0000 0000 f000" "ABSH executed"
 
 do_reset
 assert_eq [assemble {
@@ -894,7 +894,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "0008 0088 0004 0000 0000 0000 ff04" "ABSH 2 executed"
+assert_eq [get_regs] "0008 0088 0004 0000 0000 0000 f004" "ABSH 2 executed"
 
 do_reset
 assert_eq [assemble {
@@ -907,7 +907,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "0001 0088 0007 0000 0000 0000 ff00" "ABSH 3 executed"
+assert_eq [get_regs] "0001 0088 0007 0000 0000 0000 f000" "ABSH 3 executed"
 
 do_reset
 assert_eq [assemble {
@@ -920,7 +920,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "0000 0088 0008 0000 0000 0000 ff05" "ABSH 4 executed"
+assert_eq [get_regs] "0000 0088 0008 0000 0000 0000 f005" "ABSH 4 executed"
 
 do_reset
 assert_eq [assemble {
@@ -933,7 +933,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "0110 0088 ffff 0000 0000 0000 ff00" "ABSH 5 executed"
+assert_eq [get_regs] "0110 0088 ffff 0000 0000 0000 f000" "ABSH 5 executed"
 
 do_reset
 assert_eq [assemble {
@@ -946,7 +946,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "8800 0088 fff8 0000 0000 0000 ff02" "ABSH 6 executed"
+assert_eq [get_regs] "8800 0088 fff8 0000 0000 0000 f002" "ABSH 6 executed"
 
 do_reset
 assert_eq [assemble {
@@ -959,7 +959,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "1000 0088 fff7 0000 0000 0000 ff04" "ABSH 6 executed"
+assert_eq [get_regs] "1000 0088 fff7 0000 0000 0000 f004" "ABSH 6 executed"
 
 do_reset
 assert_eq [assemble {
@@ -972,7 +972,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "8000 0088 fff4 0000 0000 0000 ff02" "ABSH 7 executed"
+assert_eq [get_regs] "8000 0088 fff4 0000 0000 0000 f002" "ABSH 7 executed"
 
 do_reset
 assert_eq [assemble {
@@ -985,7 +985,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "0000 0088 fff3 0000 0000 0000 ff05" "ABSH 8 executed"
+assert_eq [get_regs] "0000 0088 fff3 0000 0000 0000 f005" "ABSH 8 executed"
 
 do_reset
 assert_eq [assemble {
@@ -998,7 +998,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "fff1 ff88 0003 0000 0000 0000 ff02" "ABSH 9 executed"
+assert_eq [get_regs] "fff1 ff88 0003 0000 0000 0000 f002" "ABSH 9 executed"
 
 do_reset
 assert_eq [assemble {
@@ -1011,7 +1011,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "fff8 ff88 0004 0000 0000 0000 ff06" "ABSH 10 executed"
+assert_eq [get_regs] "fff8 ff88 0004 0000 0000 0000 f006" "ABSH 10 executed"
 
 do_reset
 assert_eq [assemble {
@@ -1024,7 +1024,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "0004 0008 0000 0000 0000 0000 ff00" "XCH executed"
+assert_eq [get_regs] "0004 0008 0000 0000 0000 0000 f000" "XCH executed"
 
 do_reset
 assert_eq [assemble {
@@ -1037,7 +1037,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "0001 ffff 0000 0000 0000 0000 ff00" "XCH 2 executed"
+assert_eq [get_regs] "0001 ffff 0000 0000 0000 0000 f000" "XCH 2 executed"
 
 do_reset
 assert_eq [assemble {
@@ -1048,7 +1048,7 @@ assert_eq [dump 2 2] "38 00" "TST assembled correctly"
 do_exec
 do_exec
 assert_eq [get_pc] 4 "pc advanced"
-assert_eq [get_regs] "0001 0000 0000 0000 0000 0000 ff00" "TST executed"
+assert_eq [get_regs] "0001 0000 0000 0000 0000 0000 f000" "TST executed"
 
 do_reset
 assert_eq [assemble {
@@ -1059,7 +1059,7 @@ assert_eq [dump 2 2] "38 00" "TST 2 assembled correctly"
 do_exec
 do_exec
 assert_eq [get_pc] 4 "pc advanced"
-assert_eq [get_regs] "0000 0000 0000 0000 0000 0000 ff01" "TST 2 executed"
+assert_eq [get_regs] "0000 0000 0000 0000 0000 0000 f001" "TST 2 executed"
 
 do_reset
 assert_eq [assemble {
@@ -1070,7 +1070,7 @@ assert_eq [dump 2 2] "38 00" "TST 3 assembled correctly"
 do_exec
 do_exec
 assert_eq [get_pc] 4 "pc advanced"
-assert_eq [get_regs] "ffff 0000 0000 0000 0000 0000 ff02" "TST 3 executed"
+assert_eq [get_regs] "ffff 0000 0000 0000 0000 0000 f002" "TST 3 executed"
 
 do_reset
 assert_eq [assemble {
@@ -1083,7 +1083,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "0001 0001 0000 0000 0000 0000 ff01" "CMP executed"
+assert_eq [get_regs] "0001 0001 0000 0000 0000 0000 f001" "CMP executed"
 
 do_reset
 assert_eq [assemble {
@@ -1096,7 +1096,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "0001 0000 0000 0000 0000 0000 ff00" "CMP 2 executed"
+assert_eq [get_regs] "0001 0000 0000 0000 0000 0000 f000" "CMP 2 executed"
 
 do_reset
 assert_eq [assemble {
@@ -1109,7 +1109,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "0000 0001 0000 0000 0000 0000 ff02" "CMP 3 executed"
+assert_eq [get_regs] "0000 0001 0000 0000 0000 0000 f002" "CMP 3 executed"
 
 do_reset
 assert_eq [assemble {
@@ -1118,7 +1118,7 @@ assert_eq [assemble {
 assert_eq [dump 0 2] "80 00" "IMM assembled correctly"
 do_exec
 assert_eq [get_pc] 2 "pc advanced"
-assert_eq [get_regs] "0000 0000 0000 0000 0000 0000 ff00" "IMM executed"
+assert_eq [get_regs] "0000 0000 0000 0000 0000 0000 f000" "IMM executed"
 
 do_reset
 assert_eq [assemble {
@@ -1127,7 +1127,7 @@ assert_eq [assemble {
 assert_eq [dump 0 2] "80 01" "IMM 2 assembled correctly"
 do_exec
 assert_eq [get_pc] 2 "pc advanced"
-assert_eq [get_regs] "0001 0000 0000 0000 0000 0000 ff00" "IMM 2 executed"
+assert_eq [get_regs] "0001 0000 0000 0000 0000 0000 f000" "IMM 2 executed"
 
 do_reset
 assert_eq [assemble {
@@ -1136,7 +1136,7 @@ assert_eq [assemble {
 assert_eq [dump 0 2] "81 ff" "IMM 3 assembled correctly"
 do_exec
 assert_eq [get_pc] 2 "pc advanced"
-assert_eq [get_regs] "01ff 0000 0000 0000 0000 0000 ff00" "IMM 3 executed"
+assert_eq [get_regs] "01ff 0000 0000 0000 0000 0000 f000" "IMM 3 executed"
 
 do_reset
 assert_eq [assemble {
@@ -1145,7 +1145,7 @@ assert_eq [assemble {
 assert_eq [dump 0 2] "82 01" "IMM 4 assembled correctly"
 do_exec
 assert_eq [get_pc] 2 "pc advanced"
-assert_eq [get_regs] "0000 0001 0000 0000 0000 0000 ff00" "IMM 4 executed"
+assert_eq [get_regs] "0000 0001 0000 0000 0000 0000 f000" "IMM 4 executed"
 
 do_reset
 assert_eq [assemble {
@@ -1154,7 +1154,7 @@ assert_eq [assemble {
 assert_eq [dump 0 2] "84 01" "IMM 5 assembled correctly"
 do_exec
 assert_eq [get_pc] 2 "pc advanced"
-assert_eq [get_regs] "0000 0000 0001 0000 0000 0000 ff00" "IMM 5 executed"
+assert_eq [get_regs] "0000 0000 0001 0000 0000 0000 f000" "IMM 5 executed"
 
 do_reset
 assert_eq [assemble {
@@ -1163,7 +1163,7 @@ assert_eq [assemble {
 assert_eq [dump 0 2] "86 01" "IMM 6 assembled correctly"
 do_exec
 assert_eq [get_pc] 2 "pc advanced"
-assert_eq [get_regs] "0000 0000 0000 0001 0000 0000 ff00" "IMM 6 executed"
+assert_eq [get_regs] "0000 0000 0000 0001 0000 0000 f000" "IMM 6 executed"
 
 do_reset
 assert_eq [assemble {
@@ -1172,7 +1172,7 @@ assert_eq [assemble {
 assert_eq [dump 0 2] "88 01" "IMM 7 assembled correctly"
 do_exec
 assert_eq [get_pc] 2 "pc advanced"
-assert_eq [get_regs] "0000 0000 0000 0000 0001 0000 ff00" "IMM 7 executed"
+assert_eq [get_regs] "0000 0000 0000 0000 0001 0000 f000" "IMM 7 executed"
 
 do_reset
 assert_eq [assemble {
@@ -1181,7 +1181,7 @@ assert_eq [assemble {
 assert_eq [dump 0 2] "8a 01" "IMM 8 assembled correctly"
 do_exec
 assert_eq [get_pc] 2 "pc advanced"
-assert_eq [get_regs] "0000 0000 0000 0000 0000 0001 ff00" "IMM 8 executed"
+assert_eq [get_regs] "0000 0000 0000 0000 0000 0001 f000" "IMM 8 executed"
 
 do_reset
 assert_eq [assemble {
@@ -1190,7 +1190,7 @@ assert_eq [assemble {
 assert_eq [dump 0 2] "8c 01" "IMM 9 assembled correctly"
 do_exec
 assert_eq [get_pc] 2 "pc advanced"
-assert_eq [get_regs] "0000 0000 0000 0000 0000 0000 ff00" "IMM 9 executed"
+assert_eq [get_regs] "0000 0000 0000 0000 0000 0000 f000" "IMM 9 executed"
 
 do_reset
 assert_eq [assemble {
@@ -1199,7 +1199,7 @@ assert_eq [assemble {
 assert_eq [dump 0 2] "8e 01" "IMM 10 assembled correctly"
 do_exec
 assert_eq [get_pc] 2 "pc advanced"
-assert_eq [get_regs] "0000 0000 0000 0000 0000 0000 ff00" "IMM 10 executed"
+assert_eq [get_regs] "0000 0000 0000 0000 0000 0000 f000" "IMM 10 executed"
 
 do_reset
 assert_eq [assemble {
@@ -1208,7 +1208,7 @@ assert_eq [assemble {
 assert_eq [dump 0 2] "90 00" "IMMS assembled correctly"
 do_exec
 assert_eq [get_pc] 2 "pc advanced"
-assert_eq [get_regs] "0000 0000 0000 0000 0000 0000 ff00" "IMMS executed"
+assert_eq [get_regs] "0000 0000 0000 0000 0000 0000 f000" "IMMS executed"
 
 do_reset
 assert_eq [assemble {
@@ -1217,7 +1217,7 @@ assert_eq [assemble {
 assert_eq [dump 0 2] "90 01" "IMMS 2 assembled correctly"
 do_exec
 assert_eq [get_pc] 2 "pc advanced"
-assert_eq [get_regs] "0001 0000 0000 0000 0000 0000 ff00" "IMMS 2 executed"
+assert_eq [get_regs] "0001 0000 0000 0000 0000 0000 f000" "IMMS 2 executed"
 
 do_reset
 assert_eq [assemble {
@@ -1226,7 +1226,7 @@ assert_eq [assemble {
 assert_eq [dump 0 2] "91 ff" "IMMS 3 assembled correctly"
 do_exec
 assert_eq [get_pc] 2 "pc advanced"
-assert_eq [get_regs] "ffff 0000 0000 0000 0000 0000 ff00" "IMMS 3 executed"
+assert_eq [get_regs] "ffff 0000 0000 0000 0000 0000 f000" "IMMS 3 executed"
 
 do_reset
 assert_eq [assemble {
@@ -1238,7 +1238,7 @@ store_byte 16 127
 do_exec
 do_exec
 assert_eq [get_pc] 4 "pc advanced"
-assert_eq [get_regs] "007f 0010 0000 0000 0000 0000 ff00" "LOADBR executed"
+assert_eq [get_regs] "007f 0010 0000 0000 0000 0000 f000" "LOADBR executed"
 
 do_reset
 assert_eq [assemble {
@@ -1250,7 +1250,7 @@ store_byte 16 255
 do_exec
 do_exec
 assert_eq [get_pc] 4 "pc advanced"
-assert_eq [get_regs] "00ff 0010 0000 0000 0000 0000 ff00" "LOADBR 2 executed"
+assert_eq [get_regs] "00ff 0010 0000 0000 0000 0000 f000" "LOADBR 2 executed"
 
 do_reset
 assert_eq [assemble {
@@ -1260,7 +1260,7 @@ assert_eq [dump 0 2] "a0 10" "LOADBI assembled correctly"
 store_byte 16 127
 do_exec
 assert_eq [get_pc] 2 "pc advanced"
-assert_eq [get_regs] "007f 0000 0000 0000 0000 0000 ff00" "LOADBI executed"
+assert_eq [get_regs] "007f 0000 0000 0000 0000 0000 f000" "LOADBI executed"
 
 do_reset
 assert_eq [assemble {
@@ -1270,7 +1270,7 @@ assert_eq [dump 0 2] "a0 10" "LOADBI 2 assembled correctly"
 store_byte 16 255
 do_exec
 assert_eq [get_pc] 2 "pc advanced"
-assert_eq [get_regs] "00ff 0000 0000 0000 0000 0000 ff00" "LOADBI 2 executed"
+assert_eq [get_regs] "00ff 0000 0000 0000 0000 0000 f000" "LOADBI 2 executed"
 
 do_reset
 assert_eq [assemble {
@@ -1282,7 +1282,7 @@ store_byte 16 127
 do_exec
 do_exec
 assert_eq [get_pc] 4 "pc advanced"
-assert_eq [get_regs] "007f 0010 0000 0000 0000 0000 ff00" "LOADSR executed"
+assert_eq [get_regs] "007f 0010 0000 0000 0000 0000 f000" "LOADSR executed"
 
 do_reset
 assert_eq [assemble {
@@ -1294,7 +1294,7 @@ store_byte 16 255
 do_exec
 do_exec
 assert_eq [get_pc] 4 "pc advanced"
-assert_eq [get_regs] "ffff 0010 0000 0000 0000 0000 ff00" "LOADSR 2 executed"
+assert_eq [get_regs] "ffff 0010 0000 0000 0000 0000 f000" "LOADSR 2 executed"
 
 do_reset
 assert_eq [assemble {
@@ -1304,7 +1304,7 @@ assert_eq [dump 0 2] "b0 10" "LOADSI assembled correctly"
 store_byte 16 127
 do_exec
 assert_eq [get_pc] 2 "pc advanced"
-assert_eq [get_regs] "007f 0000 0000 0000 0000 0000 ff00" "LOADSI executed"
+assert_eq [get_regs] "007f 0000 0000 0000 0000 0000 f000" "LOADSI executed"
 
 do_reset
 assert_eq [assemble {
@@ -1314,7 +1314,7 @@ assert_eq [dump 0 2] "b0 10" "LOADSI 2 assembled correctly"
 store_byte 16 255
 do_exec
 assert_eq [get_pc] 2 "pc advanced"
-assert_eq [get_regs] "ffff 0000 0000 0000 0000 0000 ff00" "LOADSI 2 executed"
+assert_eq [get_regs] "ffff 0000 0000 0000 0000 0000 f000" "LOADSI 2 executed"
 
 do_reset
 assert_eq [assemble {
@@ -1326,7 +1326,7 @@ store_word 16 257
 do_exec
 do_exec
 assert_eq [get_pc] 4 "pc advanced"
-assert_eq [get_regs] "0101 0010 0000 0000 0000 0000 ff00" "LOADWR executed"
+assert_eq [get_regs] "0101 0010 0000 0000 0000 0000 f000" "LOADWR executed"
 
 do_reset
 assert_eq [assemble {
@@ -1336,7 +1336,7 @@ assert_eq [dump 0 2] "c0 10" "LOADWI assembled correctly"
 store_word 16 257
 do_exec
 assert_eq [get_pc] 2 "pc advanced"
-assert_eq [get_regs] "0101 0000 0000 0000 0000 0000 ff00" "LOADWI executed"
+assert_eq [get_regs] "0101 0000 0000 0000 0000 0000 f000" "LOADWI executed"
 
 do_reset
 assert_eq [assemble {
@@ -1349,7 +1349,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "0010 0181 0000 0000 0000 0000 ff00" "registers prepared"
+assert_eq [get_regs] "0010 0181 0000 0000 0000 0000 f000" "registers prepared"
 assert_eq [load_byte 16] 129 "STOREBR executed"
 
 do_reset
@@ -1361,7 +1361,7 @@ assert_eq [dump 2 2] "d2 10" "STOREBI assembled correctly"
 do_exec
 do_exec
 assert_eq [get_pc] 4 "pc advanced"
-assert_eq [get_regs] "0000 0181 0000 0000 0000 0000 ff00" "registers prepared"
+assert_eq [get_regs] "0000 0181 0000 0000 0000 0000 f000" "registers prepared"
 assert_eq [load_byte 16] 129 "STOREBI executed"
 
 do_reset
@@ -1375,7 +1375,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "0010 0181 0000 0000 0000 0000 ff00" "registers prepared"
+assert_eq [get_regs] "0010 0181 0000 0000 0000 0000 f000" "registers prepared"
 assert_eq [load_word 16] 385 "STOREWR executed"
 
 do_reset
@@ -1387,7 +1387,7 @@ assert_eq [dump 2 2] "e2 10" "STOREWI assembled correctly"
 do_exec
 do_exec
 assert_eq [get_pc] 4 "pc advanced"
-assert_eq [get_regs] "0000 0181 0000 0000 0000 0000 ff00" "registers prepared"
+assert_eq [get_regs] "0000 0181 0000 0000 0000 0000 f000" "registers prepared"
 assert_eq [load_word 16] 385 "STOREWI executed"
 
 do_reset
@@ -1403,7 +1403,7 @@ do_exec
 do_exec
 do_exec
 assert_eq [get_pc] 6 "pc advanced"
-assert_eq [get_regs] "0010 0018 0000 0000 0000 0000 ff00" "registers prepared"
+assert_eq [get_regs] "0010 0018 0000 0000 0000 0000 f000" "registers prepared"
 assert_eq [load_byte 16] 126 "MXCH partially executed"
 assert_eq [load_byte 24] 129 "MXCH partially executed"
 
@@ -1423,7 +1423,7 @@ assert_eq [dump 4 2] "40 10" "Jc ALWAYS assembled correctly"
 do_exec
 do_exec
 do_exec
-assert_eq [get_regs] "0001 0000 0000 0000 0000 0000 ff00" "registers prepared"
+assert_eq [get_regs] "0001 0000 0000 0000 0000 0000 f000" "registers prepared"
 assert_eq [get_pc] 22 "Jc ALWAYS executed"
 
 do_reset
@@ -1436,7 +1436,7 @@ assert_eq [dump 4 2] "40 10" "Jc ALWAYS 2 assembled correctly"
 do_exec
 do_exec
 do_exec
-assert_eq [get_regs] "0000 0000 0000 0000 0000 0000 ff01" "registers prepared"
+assert_eq [get_regs] "0000 0000 0000 0000 0000 0000 f001" "registers prepared"
 assert_eq [get_pc] 22 "Jc ALWAYS 2 executed"
 
 do_reset
@@ -1449,7 +1449,7 @@ assert_eq [dump 4 2] "40 10" "Jc ALWAYS 3 assembled correctly"
 do_exec
 do_exec
 do_exec
-assert_eq [get_regs] "ffff 0000 0000 0000 0000 0000 ff02" "registers prepared"
+assert_eq [get_regs] "ffff 0000 0000 0000 0000 0000 f002" "registers prepared"
 assert_eq [get_pc] 22 "Jc ALWAYS 3 executed"
 
 do_reset
@@ -1462,7 +1462,7 @@ assert_eq [dump 4 2] "41 10" "Jc ZRO assembled correctly"
 do_exec
 do_exec
 do_exec
-assert_eq [get_regs] "0001 0000 0000 0000 0000 0000 ff00" "registers prepared"
+assert_eq [get_regs] "0001 0000 0000 0000 0000 0000 f000" "registers prepared"
 assert_eq [get_pc] 6 "Jc ZRO executed"
 
 do_reset
@@ -1475,7 +1475,7 @@ assert_eq [dump 4 2] "41 10" "Jc ZRO 2 assembled correctly"
 do_exec
 do_exec
 do_exec
-assert_eq [get_regs] "0000 0000 0000 0000 0000 0000 ff01" "registers prepared"
+assert_eq [get_regs] "0000 0000 0000 0000 0000 0000 f001" "registers prepared"
 assert_eq [get_pc] 22 "Jc ZRO 2 executed"
 
 do_reset
@@ -1488,7 +1488,7 @@ assert_eq [dump 4 2] "41 10" "Jc ALWAYS 3 assembled correctly"
 do_exec
 do_exec
 do_exec
-assert_eq [get_regs] "ffff 0000 0000 0000 0000 0000 ff02" "registers prepared"
+assert_eq [get_regs] "ffff 0000 0000 0000 0000 0000 f002" "registers prepared"
 assert_eq [get_pc] 6 "Jc ZRO 3 executed"
 
 do_reset
@@ -1501,7 +1501,7 @@ assert_eq [dump 4 2] "42 10" "Jc NEG assembled correctly"
 do_exec
 do_exec
 do_exec
-assert_eq [get_regs] "0001 0000 0000 0000 0000 0000 ff00" "registers prepared"
+assert_eq [get_regs] "0001 0000 0000 0000 0000 0000 f000" "registers prepared"
 assert_eq [get_pc] 6 "Jc NEG executed"
 
 do_reset
@@ -1514,7 +1514,7 @@ assert_eq [dump 4 2] "42 10" "Jc NEG 2 assembled correctly"
 do_exec
 do_exec
 do_exec
-assert_eq [get_regs] "0000 0000 0000 0000 0000 0000 ff01" "registers prepared"
+assert_eq [get_regs] "0000 0000 0000 0000 0000 0000 f001" "registers prepared"
 assert_eq [get_pc] 6 "Jc NEG 2 executed"
 
 do_reset
@@ -1527,7 +1527,7 @@ assert_eq [dump 4 2] "42 10" "Jc ALWAYS 3 assembled correctly"
 do_exec
 do_exec
 do_exec
-assert_eq [get_regs] "ffff 0000 0000 0000 0000 0000 ff02" "registers prepared"
+assert_eq [get_regs] "ffff 0000 0000 0000 0000 0000 f002" "registers prepared"
 assert_eq [get_pc] 22 "Jc NEG 3 executed"
 
 do_reset
@@ -1542,7 +1542,7 @@ do_exec
 do_exec
 do_exec
 do_exec
-assert_eq [get_regs] "0000 0001 0000 0000 0000 0000 ff05" "registers prepared"
+assert_eq [get_regs] "0000 0001 0000 0000 0000 0000 f005" "registers prepared"
 assert_eq [get_pc] 24 "Jc CARRY executed"
 
 do_reset
@@ -1551,7 +1551,7 @@ assert_eq [assemble {
 }] "OK" "assemble Jc CARRY test 2"
 assert_eq [dump 0 2] "43 10" "Jc CARRY 2 assembled correctly"
 do_exec
-assert_eq [get_regs] "0000 0000 0000 0000 0000 0000 ff00" "registers prepared"
+assert_eq [get_regs] "0000 0000 0000 0000 0000 0000 f000" "registers prepared"
 assert_eq [get_pc] 2 "Jc CARRY 2 executed"
 
 do_reset
@@ -1566,7 +1566,7 @@ do_exec
 do_exec
 do_exec
 do_exec
-assert_eq [get_regs] "0000 0001 0000 0000 0000 0000 ff05" "registers prepared"
+assert_eq [get_regs] "0000 0001 0000 0000 0000 0000 f005" "registers prepared"
 assert_eq [get_pc] 8 "Jc NO_CARRY executed"
 
 do_reset
@@ -1575,7 +1575,7 @@ assert_eq [assemble {
 }] "OK" "assemble Jc NO_CARRY test 2"
 assert_eq [dump 0 2] "44 10" "Jc NO_CARRY 2 assembled correctly"
 do_exec
-assert_eq [get_regs] "0000 0000 0000 0000 0000 0000 ff00" "registers prepared"
+assert_eq [get_regs] "0000 0000 0000 0000 0000 0000 f000" "registers prepared"
 assert_eq [get_pc] 18 "Jc NO_CARRY 2 executed"
 
 do_reset
@@ -1592,7 +1592,7 @@ do_exec
 do_exec
 do_exec
 do_exec
-assert_eq [get_regs] "8000 0001 0000 0000 0000 0000 ff0a" "registers prepared"
+assert_eq [get_regs] "8000 0001 0000 0000 0000 0000 f00a" "registers prepared"
 assert_eq [get_pc] 26 "Jc OVERFLOW executed"
 
 do_reset
@@ -1601,7 +1601,7 @@ assert_eq [assemble {
 }] "OK" "assemble Jc OVERFLOW test 2"
 assert_eq [dump 0 2] "45 10" "Jc OVERFLOW 2 assembled correctly"
 do_exec
-assert_eq [get_regs] "0000 0000 0000 0000 0000 0000 ff00" "registers prepared"
+assert_eq [get_regs] "0000 0000 0000 0000 0000 0000 f000" "registers prepared"
 assert_eq [get_pc] 2 "Jc OVERFLOW 2 executed"
 
 do_reset
@@ -1616,7 +1616,7 @@ do_exec
 do_exec
 do_exec
 do_exec
-assert_eq [get_regs] "0001 0000 0000 0000 0000 0000 ff00" "registers prepared"
+assert_eq [get_regs] "0001 0000 0000 0000 0000 0000 f000" "registers prepared"
 assert_eq [get_pc] 24 "Jc NONZERO executed"
 
 do_reset
@@ -1629,7 +1629,7 @@ assert_eq [dump 4 2] "46 10" "Jc NONZERO 2 assembled correctly"
 do_exec
 do_exec
 do_exec
-assert_eq [get_regs] "0000 0000 0000 0000 0000 0000 ff01" "registers prepared"
+assert_eq [get_regs] "0000 0000 0000 0000 0000 0000 f001" "registers prepared"
 assert_eq [get_pc] 6 "Jc NONZERO 2 executed"
 
 do_reset
@@ -1642,7 +1642,7 @@ assert_eq [dump 4 2] "46 10" "Jc NONZERO 3 assembled correctly"
 do_exec
 do_exec
 do_exec
-assert_eq [get_regs] "ffff 0000 0000 0000 0000 0000 ff02" "registers prepared"
+assert_eq [get_regs] "ffff 0000 0000 0000 0000 0000 f002" "registers prepared"
 assert_eq [get_pc] 22 "Jc NONZERO 3 executed"
 
 do_reset
@@ -1657,7 +1657,7 @@ do_exec
 do_exec
 do_exec
 do_exec
-assert_eq [get_regs] "0001 0000 0000 0000 0000 0000 ff00" "registers prepared"
+assert_eq [get_regs] "0001 0000 0000 0000 0000 0000 f000" "registers prepared"
 assert_eq [get_pc] 24 "Jc POS executed"
 
 do_reset
@@ -1670,7 +1670,7 @@ assert_eq [dump 4 2] "47 10" "Jc POS 2 assembled correctly"
 do_exec
 do_exec
 do_exec
-assert_eq [get_regs] "0000 0000 0000 0000 0000 0000 ff01" "registers prepared"
+assert_eq [get_regs] "0000 0000 0000 0000 0000 0000 f001" "registers prepared"
 assert_eq [get_pc] 6 "Jc POS 2 executed"
 
 do_reset
@@ -1683,7 +1683,7 @@ assert_eq [dump 4 2] "47 10" "Jc POS 3 assembled correctly"
 do_exec
 do_exec
 do_exec
-assert_eq [get_regs] "ffff 0000 0000 0000 0000 0000 ff02" "registers prepared"
+assert_eq [get_regs] "ffff 0000 0000 0000 0000 0000 f002" "registers prepared"
 assert_eq [get_pc] 6 "Jc POS 3 executed"
 
 do_reset
@@ -1705,7 +1705,7 @@ do_exec
 do_exec
 do_exec
 do_exec
-assert_eq [get_regs] "0001 0000 0010 0000 0000 0000 ff00" "registers prepared"
+assert_eq [get_regs] "0001 0000 0010 0000 0000 0000 f000" "registers prepared"
 assert_eq [get_pc] 24 "Jc ALWAYS executed"
 
 do_reset
@@ -1720,7 +1720,7 @@ do_exec
 do_exec
 do_exec
 do_exec
-assert_eq [get_regs] "0000 0000 0010 0000 0000 0000 ff01" "registers prepared"
+assert_eq [get_regs] "0000 0000 0010 0000 0000 0000 f001" "registers prepared"
 assert_eq [get_pc] 24 "Jc ALWAYS 2 executed"
 
 do_reset
@@ -1735,7 +1735,7 @@ do_exec
 do_exec
 do_exec
 do_exec
-assert_eq [get_regs] "ffff 0000 0010 0000 0000 0000 ff02" "registers prepared"
+assert_eq [get_regs] "ffff 0000 0010 0000 0000 0000 f002" "registers prepared"
 assert_eq [get_pc] 24 "Jc ALWAYS 3 executed"
 
 do_reset
@@ -1750,7 +1750,7 @@ do_exec
 do_exec
 do_exec
 do_exec
-assert_eq [get_regs] "ffff 0000 0010 0000 0000 0000 ff02" "registers prepared"
+assert_eq [get_regs] "ffff 0000 0010 0000 0000 0000 f002" "registers prepared"
 assert_eq [get_pc] 47 "Jc ALWAYS 4 executed"
 
 do_reset
@@ -1765,7 +1765,7 @@ do_exec
 do_exec
 do_exec
 do_exec
-assert_eq [get_regs] "0001 0000 0010 0000 0000 0000 ff00" "registers prepared"
+assert_eq [get_regs] "0001 0000 0010 0000 0000 0000 f000" "registers prepared"
 assert_eq [get_pc] 8 "Jc ZRO executed"
 
 do_reset
@@ -1780,7 +1780,7 @@ do_exec
 do_exec
 do_exec
 do_exec
-assert_eq [get_regs] "0000 0000 0010 0000 0000 0000 ff01" "registers prepared"
+assert_eq [get_regs] "0000 0000 0010 0000 0000 0000 f001" "registers prepared"
 assert_eq [get_pc] 24 "Jc ZRO 2 executed"
 
 do_reset
@@ -1795,7 +1795,7 @@ do_exec
 do_exec
 do_exec
 do_exec
-assert_eq [get_regs] "ffff 0000 0010 0000 0000 0000 ff02" "registers prepared"
+assert_eq [get_regs] "ffff 0000 0010 0000 0000 0000 f002" "registers prepared"
 assert_eq [get_pc] 8 "Jc ZRO 3 executed"
 
 do_reset
@@ -1810,7 +1810,7 @@ do_exec
 do_exec
 do_exec
 do_exec
-assert_eq [get_regs] "0001 0000 0010 0000 0000 0000 ff00" "registers prepared"
+assert_eq [get_regs] "0001 0000 0010 0000 0000 0000 f000" "registers prepared"
 assert_eq [get_pc] 8 "Jc NEG executed"
 
 do_reset
@@ -1825,7 +1825,7 @@ do_exec
 do_exec
 do_exec
 do_exec
-assert_eq [get_regs] "0000 0000 0010 0000 0000 0000 ff01" "registers prepared"
+assert_eq [get_regs] "0000 0000 0010 0000 0000 0000 f001" "registers prepared"
 assert_eq [get_pc] 8 "Jc NEG 2 executed"
 
 do_reset
@@ -1840,7 +1840,7 @@ do_exec
 do_exec
 do_exec
 do_exec
-assert_eq [get_regs] "ffff 0000 0010 0000 0000 0000 ff02" "registers prepared"
+assert_eq [get_regs] "ffff 0000 0010 0000 0000 0000 f002" "registers prepared"
 assert_eq [get_pc] 24 "Jc NEG 3 executed"
 
 do_reset
@@ -1857,7 +1857,7 @@ do_exec
 do_exec
 do_exec
 do_exec
-assert_eq [get_regs] "0000 0001 0010 0000 0000 0000 ff05" "registers prepared"
+assert_eq [get_regs] "0000 0001 0010 0000 0000 0000 f005" "registers prepared"
 assert_eq [get_pc] 24 "Jc CARRY executed"
 
 do_reset
@@ -1868,7 +1868,7 @@ assert_eq [assemble {
 assert_eq [dump 2 2] "4b 48" "Jc CARRY 2 assembled correctly"
 do_exec
 do_exec
-assert_eq [get_regs] "0000 0000 0010 0000 0000 0000 ff00" "registers prepared"
+assert_eq [get_regs] "0000 0000 0010 0000 0000 0000 f000" "registers prepared"
 assert_eq [get_pc] 4 "Jc CARRY 2 executed"
 
 do_reset
@@ -1885,7 +1885,7 @@ do_exec
 do_exec
 do_exec
 do_exec
-assert_eq [get_regs] "0000 0001 0010 0000 0000 0000 ff05" "registers prepared"
+assert_eq [get_regs] "0000 0001 0010 0000 0000 0000 f005" "registers prepared"
 assert_eq [get_pc] 10 "Jc NO_CARRY executed"
 
 do_reset
@@ -1896,7 +1896,7 @@ assert_eq [assemble {
 assert_eq [dump 2 2] "4c 48" "Jc NO_CARRY 2 assembled correctly"
 do_exec
 do_exec
-assert_eq [get_regs] "0000 0000 0010 0000 0000 0000 ff00" "registers prepared"
+assert_eq [get_regs] "0000 0000 0010 0000 0000 0000 f000" "registers prepared"
 assert_eq [get_pc] 24 "Jc NO_CARRY 2 executed"
 
 do_reset
@@ -1915,7 +1915,7 @@ do_exec
 do_exec
 do_exec
 do_exec
-assert_eq [get_regs] "8000 0001 0010 0000 0000 0000 ff0a" "registers prepared"
+assert_eq [get_regs] "8000 0001 0010 0000 0000 0000 f00a" "registers prepared"
 assert_eq [get_pc] 24 "Jc OVERFLOW executed"
 
 do_reset
@@ -1926,7 +1926,7 @@ assert_eq [assemble {
 assert_eq [dump 2 2] "4d 48" "Jc OVERFLOW 2 assembled correctly"
 do_exec
 do_exec
-assert_eq [get_regs] "0000 0000 0010 0000 0000 0000 ff00" "registers prepared"
+assert_eq [get_regs] "0000 0000 0010 0000 0000 0000 f000" "registers prepared"
 assert_eq [get_pc] 4 "Jc OVERFLOW 2 executed"
 
 do_reset
@@ -1943,7 +1943,7 @@ do_exec
 do_exec
 do_exec
 do_exec
-assert_eq [get_regs] "0001 0000 0010 0000 0000 0000 ff00" "registers prepared"
+assert_eq [get_regs] "0001 0000 0010 0000 0000 0000 f000" "registers prepared"
 assert_eq [get_pc] 24 "Jc NONZERO executed"
 
 do_reset
@@ -1958,7 +1958,7 @@ do_exec
 do_exec
 do_exec
 do_exec
-assert_eq [get_regs] "0000 0000 0010 0000 0000 0000 ff01" "registers prepared"
+assert_eq [get_regs] "0000 0000 0010 0000 0000 0000 f001" "registers prepared"
 assert_eq [get_pc] 8 "Jc NONZERO 2 executed"
 
 do_reset
@@ -1973,7 +1973,7 @@ do_exec
 do_exec
 do_exec
 do_exec
-assert_eq [get_regs] "ffff 0000 0010 0000 0000 0000 ff02" "registers prepared"
+assert_eq [get_regs] "ffff 0000 0010 0000 0000 0000 f002" "registers prepared"
 assert_eq [get_pc] 24 "Jc NONZERO 3 executed"
 
 do_reset
@@ -1990,7 +1990,7 @@ do_exec
 do_exec
 do_exec
 do_exec
-assert_eq [get_regs] "0001 0000 0010 0000 0000 0000 ff00" "registers prepared"
+assert_eq [get_regs] "0001 0000 0010 0000 0000 0000 f000" "registers prepared"
 assert_eq [get_pc] 24 "Jc POS executed"
 
 do_reset
@@ -2005,7 +2005,7 @@ do_exec
 do_exec
 do_exec
 do_exec
-assert_eq [get_regs] "0000 0000 0010 0000 0000 0000 ff01" "registers prepared"
+assert_eq [get_regs] "0000 0000 0010 0000 0000 0000 f001" "registers prepared"
 assert_eq [get_pc] 8 "Jc POS 2 executed"
 
 do_reset
@@ -2020,8 +2020,112 @@ do_exec
 do_exec
 do_exec
 do_exec
-assert_eq [get_regs] "ffff 0000 0010 0000 0000 0000 ff02" "registers prepared"
+assert_eq [get_regs] "ffff 0000 0010 0000 0000 0000 f002" "registers prepared"
 assert_eq [get_pc] 8 "Jc POS 3 executed"
+
+do_reset
+assert_eq [assemble {
+	IMM r0 16
+	OUT r0 UP
+	XCH r0 r0
+	IN r1 DOWN
+	XCH r0 r0
+}] "OK" "assemble IN/OUT test"
+assert_eq [dump 2 2] "68 00" "OUT assembled correctly"
+assert_eq [dump 6 2] "61 40" "IN assembled correctly"
+do_exec
+assert_eq [get_regs] "0010 0000 0000 0000 0000 0000 f000" "registers prepared"
+do_exec
+do_exec
+assert_eq [get_regs] "0010 0000 0000 0000 0000 0000 b100" "OUT executed"
+do_exec
+do_exec
+assert_eq [get_regs] "0010 0010 0000 0000 0000 0000 f000" "IN executed"
+assert_eq [get_pc] 10 "PC advanced"
+
+do_reset
+assert_eq [assemble {
+	IMM r0 16
+	OUT r0 RIGHT
+	XCH r0 r0
+	IN r1 LEFT
+	XCH r0 r0
+}] "OK" "assemble IN/OUT test 2"
+assert_eq [dump 2 2] "68 20" "OUT 2 assembled correctly"
+assert_eq [dump 6 2] "61 60" "IN 2 assembled correctly"
+do_exec
+assert_eq [get_regs] "0010 0000 0000 0000 0000 0000 f000" "registers prepared"
+do_exec
+do_exec
+assert_eq [get_regs] "0010 0000 0000 0000 0000 0000 7200" "OUT 2 executed"
+do_exec
+do_exec
+assert_eq [get_regs] "0010 0010 0000 0000 0000 0000 f000" "IN 2 executed"
+assert_eq [get_pc] 10 "PC advanced"
+
+do_reset
+assert_eq [assemble {
+	IMM r0 16
+	OUT r0 UP
+	XCH r0 r0
+	IN r1 ANY
+	XCH r0 r0
+	OUT r1 LAST
+	XCH r0 r0
+	IN r2 OPPOSITE
+	XCH r0 r0
+	OUT r2 CLOCKWISE
+	XCH r0 r0
+}] "OK" "assemble IN/OUT test 3"
+assert_eq [dump 2 2] "68 00" "OUT UP 3 assembled correctly"
+assert_eq [dump 6 2] "61 80" "IN ANY 3 assembled correctly"
+assert_eq [dump 10 2] "69 a0" "OUT LAST 3 assembled correctly"
+assert_eq [dump 14 2] "62 c0" "IN OPPOSITE 3 assembled correctly"
+assert_eq [dump 18 2] "6a e0" "OUT CLOCKWISE 3 assembled correctly"
+do_exec
+assert_eq [get_regs] "0010 0000 0000 0000 0000 0000 f000" "registers prepared"
+do_exec
+do_exec
+assert_eq [get_regs] "0010 0000 0000 0000 0000 0000 b100" "OUT 3 executed"
+do_exec
+do_exec
+assert_eq [get_regs] "0010 0010 0000 0000 0000 0000 f000" "IN 3 executed"
+do_exec
+do_exec
+assert_eq [get_regs] "0010 0010 0000 0000 0000 0000 e400" "OUT LAST 3 executed"
+do_exec
+do_exec
+assert_eq [get_regs] "0010 0010 0010 0000 0000 0000 f000" "IN OPPOSITE 3 executed"
+do_exec
+do_exec
+assert_eq [get_regs] "0010 0010 0010 0000 0000 0000 d800" "IN OPPOSITE 3 executed"
+assert_eq [get_pc] 22 "PC advanced"
+
+do_reset
+assert_eq [assemble {
+	IMMS r0 0x1ff
+	IMM r1 16
+	STOREWR r1 r0
+	OUTM r1 UP
+	IMM r1 24
+	INM r1 DOWN
+	XCH r0 r0
+}] "OK" "assemble INM/OUTM test"
+assert_eq [dump 6 2] "79 00" "OUTM assembled correctly"
+assert_eq [dump 10 2] "71 40" "INM assembled correctly"
+do_exec
+do_exec
+do_exec
+assert_eq [get_regs] "ffff 0010 0000 0000 0000 0000 f000" "registers prepared"
+assert_eq [dump 15 4] "00 ff ff 00" "memory prepared"
+do_exec
+do_exec
+assert_eq [get_regs] "ffff 0018 0000 0000 0000 0000 b100" "OUTM executed"
+do_exec
+do_exec
+assert_eq [get_regs] "ffff 0018 0000 0000 0000 0000 f000" "INM executed"
+assert_eq [dump 23 4] "00 ff ff 00" "INM changed memory"
+assert_eq [get_pc] 14 "PC advanced"
 
 do_reset
 assert_eq [assemble {
@@ -2127,6 +2231,11 @@ do_reset
 assert_eq [assemble {
 	IMM r0 0x7fff
 }] "FAIL 0:8 - operand too big (bitwise)" "operand bit width"
+
+do_reset
+assert_eq [assemble {
+	IMM r0 0xffff
+}] "OK" "good operand bit width when negative"
 
 send "exit\r"
 expect eof
