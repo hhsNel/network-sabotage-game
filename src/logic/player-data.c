@@ -1,4 +1,7 @@
-#include "player-data.h"
+#include "logic/player-data.h"
+
+#include "logic/board.h"
+#include "logic/port.h"
 
 struct player_data
 create_player() {

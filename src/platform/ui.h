@@ -1,7 +1,7 @@
 #ifndef PLATFORM_UI_H
 #define PLATFORM_UI_H
 
-#include "util.h"
+#include "core/util.h"
 
 #include <stdint.h>
 
@@ -67,6 +67,7 @@ struct ui_event {
 
 void ui_init();
 void ui_shutdown();
+void ui_set_status(char *status);
 void ui_set_misc_btns(struct ui_button *btns, unsigned int num);
 void ui_set_shop_items(struct ui_shop_item *items, unsigned int num);
 void ui_set_board(struct ui_board_cell board[BOARD_SZ][BOARD_SZ], struct ui_port write_right[BOARD_SZ-1][BOARD_SZ], struct ui_port write_left[BOARD_SZ-1][BOARD_SZ], struct ui_port write_up[BOARD_SZ][BOARD_SZ-1], struct ui_port write_down[BOARD_SZ][BOARD_SZ-1], struct ui_port request[BOARD_SZ], struct ui_port response[BOARD_SZ]);

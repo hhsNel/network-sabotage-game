@@ -7,12 +7,18 @@ BUILDDIR := build
 TESTDIR := test
 OBJDIR := $(BUILDDIR)/objs
 HARNESSDIR := $(BUILDDIR)/tests
-SRCS := $(filter-out $(SRCDIR)/alpha-main.c, $(wildcard $(SRCDIR)/*.c))
+SRCS := $(filter-out $(SRCDIR)/alpha-main.c, $(wildcard $(SRCDIR)/*.c) $(wildcard $(SRCDIR)/core/*.c) $(wildcard $(SRCDIR)/logic/*.c) $(wildcard $(SRCDIR)/presentation/*.c))
 
 ifeq ($(UI),ncurses)
   SRCS += $(SRCDIR)/platform/ui-ncurses.c
 else
   $(error expected a UI)
+endif
+
+ifeq ($(TMPFILE),pool-posix)
+  SRCS += $(SRCDIR)/platform/tmpfile-pool-posix.c
+else
+  $(error expected a TMPFILE)
 endif
 
 OBJS := $(SRCS:$(SRCDIR)/%.c=$(OBJDIR)/%.o)

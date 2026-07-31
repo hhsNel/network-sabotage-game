@@ -1,8 +1,9 @@
 #ifndef PLAYER_DATA_H
 #define PLAYER_DATA_H
 
-#include "board.h"
-#include "protocol.h"
+#include "core/board.h"
+#include "core/protocol.h"
+#include "logic/protocol.h"
 
 struct player_data {
 	struct board board;

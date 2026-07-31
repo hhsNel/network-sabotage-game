@@ -1,4 +1,4 @@
-#include "ui.h"
+#include "platform/ui.h"
 
 #include <ncurses.h>
 #include <string.h>
@@ -77,6 +77,9 @@ struct rect {
 	unsigned int x, y;
 	unsigned int w, h;
 };
+
+char *status_text;
+unsigned int cap_status_text;
 
 struct ui_button *misc_buttons;
 unsigned int num_misc_buttons, cap_misc_buttons;
@@ -181,6 +184,19 @@ ui_shutdown() {
 }
 
 void
+ui_set_status(char *status) {
+	if(cap_status_text < strlen(status)+1) {
+		cap_status_text = strlen(status) + 1;
+		status_text = realloc(status_text, cap_status_text);
+		if(! status_text) {
+			fprintf(stderr, "something went very wrong: realloc status_text\n");
+			exit(1);
+		}
+	}
+	strcpy(status_text, status);
+}
+
+void
 ui_set_misc_btns(struct ui_button *btns, unsigned int num) {
 	if(cap_misc_buttons < num) {
 		cap_misc_buttons = num;
@@ -259,8 +275,6 @@ ui_set_inspect(struct ui_button *btns, unsigned int btn_nr, char *text) {
 
 void
 ui_flush() {
-	char buf[256];
-
 	erase();
 
 	recompute_layout();
@@ -276,8 +290,7 @@ ui_flush() {
 	draw_board();
 	draw_inspect();
 
-	snprintf(buf, sizeof(buf), "Network Sabotage Alpha | Region: %d | Pending: %d", (int)current_focus, (int)pending);
-	mvprintw(header_rect.y, header_rect.x, "%-*.*s", header_rect.w, header_rect.w, buf);
+	mvprintw(header_rect.y, header_rect.x, "%-*.*s", header_rect.w, header_rect.w, status_text);
 	refresh();
 }
 
@@ -311,6 +324,7 @@ ui_poll(int ms) {
 	case 'q':
 	case 3:
 		return (struct ui_event){UI_EVENT_QUIT, current_focus, {0}};
+	case 2: /* C-b as alternative */
 	case 23:
 		pending = PENDING_C_W;
 		return (struct ui_event){UI_EVENT_NONE, current_focus, {0}};
@@ -351,7 +365,7 @@ ui_poll(int ms) {
 				++region_scroll;
 			}
 		} else {
-			if(board_y < BOARD_SZ-1) ++board_y;
+			if(board_y) --board_y;
 		}
 		return (struct ui_event){UI_EVENT_NONE, current_focus, {0}};
 	case 'k':
@@ -359,7 +373,7 @@ ui_poll(int ms) {
 			if(region_selected) --region_selected;
 			if(region_scroll) --region_scroll;
 		} else {
-			if(board_y) --board_y;
+			if(board_y < BOARD_SZ-1) ++board_y;
 		}
 		return (struct ui_event){UI_EVENT_NONE, current_focus, {0}};
 	case 'l':
@@ -646,31 +660,31 @@ draw_board() {
 	draw_header(board_rect, "BOARD", current_focus == UI_REGION_BOARD);
 
 	for(i = 0; i < BOARD_SZ; ++i) {
-		for(j = BOARD_SZ - 1; j < BOARD_SZ; --j) {
+		for(j = 0; j < BOARD_SZ; ++j) {
 			draw_cell(3 + board_rect.x + CELL_TOTAL_W*i,
-					2 + board_rect.y + CELL_TOTAL_H*j,
+					2 + board_rect.y + CELL_TOTAL_H*(BOARD_SZ-1-j),
 					board_cells[i][j],
 					board_x == i && board_y == j);
 		}
 	}
 	
 	for(i = 0; i < BOARD_SZ; ++i) {
-		for(j = BOARD_SZ - 2; j < BOARD_SZ; --j) {
+		for(j = 0; j < BOARD_SZ - 1; ++j) {
 			draw_port_up(3 + board_rect.x + CELL_TOTAL_W*i,
-					1 + board_rect.y + CELL_TOTAL_H*(j+1),
+					1 + board_rect.y + CELL_TOTAL_H*(BOARD_SZ-1-j),
 					write_up_ports[i][j]);
 			draw_port_down(3 + board_rect.x + CELL_TOTAL_W*i,
-					CELL_TOTAL_H + board_rect.y + CELL_TOTAL_H*j,
+					CELL_TOTAL_H + board_rect.y + CELL_TOTAL_H*(BOARD_SZ-2-j),
 					write_down_ports[i][j]);
 		}
 	}
-	for(i = 0; i < BOARD_SZ-1; ++i) {
-		for(j = BOARD_SZ - 1; j < BOARD_SZ; --j) {
+	for(i = 0; i < BOARD_SZ - 1; ++i) {
+		for(j = 0; j < BOARD_SZ; ++j) {
 			draw_port_right(CELL_TOTAL_W-2 + board_rect.x + CELL_TOTAL_W*i,
-					2 + board_rect.y + CELL_TOTAL_H*j,
+					2 + board_rect.y + CELL_TOTAL_H*(BOARD_SZ-1-j),
 					write_right_ports[i][j]);
 			draw_port_left(1 + board_rect.x + CELL_TOTAL_W*(i+1),
-					2 + board_rect.y + CELL_TOTAL_H*j,
+					2 + board_rect.y + CELL_TOTAL_H*(BOARD_SZ-1-j),
 					write_left_ports[i][j]);
 		}
 	}
@@ -697,9 +711,10 @@ draw_inspect() {
 	}
 
 	num_lines = wrap_text(inspect_text, INSPECT_W, lines, 256);
+	if(2 + num_inspect_buttons + num_lines > inspect_rect.h) num_lines = inspect_rect.h - num_inspect_buttons - 2;
 	set_style(UI_STYLE_DEFAULT, 0);
 	for(i = 0; i < num_lines; ++i) {
-		mvprintw(inspect_rect.y + 1 + num_inspect_buttons + i, inspect_rect.x, "%-s", lines[i]);
+		mvprintw(inspect_rect.y + 2 + num_inspect_buttons + i, inspect_rect.x, "%-s", lines[i]);
 	}
 }
 
@@ -777,7 +792,7 @@ move_focus(int key) {
 		break;
 	}
 
-	if(key == 'w' || key == 23) {
+	if(key == 'w' || key == 23 || key == 2) {
 		switch(current_focus) {
 		case UI_REGION_MISC:
 			current_focus = UI_REGION_SHOP;

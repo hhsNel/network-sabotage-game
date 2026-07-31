@@ -4,7 +4,9 @@
 #include <inttypes.h>
 #include <stdlib.h>
 
-#include "risc-labs.h"
+#include "logic/risc-labs.h"
+#include "logic/port.h"
+#include "logic/computer.h"
 
 int main() {
 	char cmd[1024];
@@ -30,6 +32,7 @@ int main() {
 	ports[3] = create_port();
 
 	rld->caps = -1; /* hack to enable all instructions */
+	cd->global_clock_frac = 1;
 	rl.read_up = rl.write_down = &ports[0];
 	rl.read_right = rl.write_left = &ports[1];
 	rl.read_down = rl.write_up = &ports[2];
@@ -40,14 +43,14 @@ int main() {
 		scanf("%1023[^\n]%*c", cmd);
 
 		if(strcmp(cmd, "reset") == 0) {
-			cd->reset(&rl);
+			computer_reset(&rl);
 			ports[0] = create_port();
 			ports[1] = create_port();
 			ports[2] = create_port();
 			ports[3] = create_port();
 			printf("OK\n");
 		} else if(strcmp(cmd, "exec") == 0) {
-			cd->exec(&rl);
+			computer_update(&rl);
 			update_port(&ports[0]);
 			update_port(&ports[1]);
 			update_port(&ports[2]);

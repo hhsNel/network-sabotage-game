@@ -1,9 +1,9 @@
-#ifndef BOARD_H
-#define BOARD_H
+#ifndef CORE_BOARD_H
+#define CORE_BOARD_H
 
-#include "util.h"
-#include "node.h"
-#include "port.h"
+#include "core/util.h"
+#include "core/node.h"
+#include "core/port.h"
 
 struct board {
 	struct node nodes[BOARD_SZ][BOARD_SZ];
@@ -14,10 +14,6 @@ struct board {
 	struct port request_ports[BOARD_SZ];
 	struct port response_ports[BOARD_SZ];
 };
-
-void init_board(struct board *b);
-void update_board(struct board *b);
-void insert_node(struct board *b, unsigned int x, unsigned int y, struct node n);
 
 #endif
 
