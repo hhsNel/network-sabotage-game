@@ -19,6 +19,7 @@ void cleanup() {
 int main() {
 	struct player_data pd;
 	struct global_protocol gp;
+	struct presentation_board_data pbd;
 	struct ui_event ev;
 	struct ui_button misc_btns[3];
 	struct ui_shop_item shop_items[1];
@@ -30,6 +31,7 @@ int main() {
 
 	pd = create_player();
 	gp = init_protocol();
+	init_presentation_board(&pbd);
 
 	ui_init();
 	tmpfile_init();
@@ -102,7 +104,9 @@ int main() {
 					selected_board_y = ev.data.board.y;
 					break;
 				case UI_REGION_INSPECT:
-					node_interact(&pd.board.nodes[selected_board_x][selected_board_y], ev.data.item_id);
+					node_interact(&pd.board.nodes[selected_board_x][selected_board_y],
+						&pbd.nodes[selected_board_x][selected_board_y],
+						ev.data.item_id);
 				default:
 					break;
 				}

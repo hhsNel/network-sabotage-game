@@ -44,19 +44,44 @@ void computer_inspect(struct node *n) {
 }
 
 void
-computer_interact(struct node *n, unsigned int interaction_id)
+computer_interact(struct node *n, struct presentation_node_data *pn, unsigned int interaction_id)
 {
+	char editor_cmd[512];
+	FILE *file;
+	char *asm_buffer;
+	long asm_length;
+
 	(void)n;
 
 	switch(interaction_id) {
 	case 0:
 		/* EDIT */
+		snprintf(editor_cmd, sizeof(editor_cmd), editor_fmt, tmpfile_get_name(pn->bound_tmpfile));
+		system(editor_cmd);
 		break;
 	case 1:
 		/* RESET */
+		/* send client-to-server command to reset this node */
 		break;
 	case 2:
 		/* FLASH */
+		file = fopen(tmpfile_get_name(pn->bound_tmpfile), "rb");
+		if(file) {
+			if(fseek(file, 0, SEEK_END) < 0) {
+				fclose(file);
+				break;
+			}
+			asm_length = ftell(file);
+			rewind(file);
+			asm_buffer = malloc(asm_length);
+			if(! asm_buffer) {
+				fclose(file);
+				break;
+			}
+			fread(asm_buffer, 1, asm_length, file);
+			fclose(file);
+			/* send client-to-server flash request with the text to flash in in asm_buffer */
+		}
 		break;
 	default:
 		break;

@@ -4,6 +4,17 @@
 #include "presentation/port.h"
 
 void
+init_presentation_board(struct presentation_board_data *pbd) {
+	unsigned int i, j;
+
+	for(i = 0; i < BOARD_SZ; ++i) {
+		for(j = 0; j < BOARD_SZ; ++j) {
+			pbd->nodes[i][j] = init_presentation_node();
+		}
+	}
+}
+
+void
 render_board(struct board *b, unsigned int sel_x, unsigned int sel_y) {
 	unsigned int i, j;
 	struct ui_board_cell ui_board[BOARD_SZ][BOARD_SZ];

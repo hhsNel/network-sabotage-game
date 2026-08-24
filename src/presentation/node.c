@@ -4,19 +4,27 @@
 
 struct ui_board_cell node_empty_render(struct node *);
 void node_empty_inspect(struct node *);
-void node_empty_interact(struct node *, unsigned int interaction_id);
+void node_empty_interact(struct node *, struct presentation_node_data *, unsigned int interaction_id);
 struct ui_board_cell computer_render(struct node *);
 void computer_inspect(struct node *);
-void computer_interact(struct node *, unsigned int interaction_id);
+void computer_interact(struct node *, struct presentation_node_data *, unsigned int interaction_id);
 
 struct {
 	struct ui_board_cell (*render)(struct node *);
 	void (*inspect)(struct node *);
-	void (*interact)(struct node *, unsigned int interaction_id);
+	void (*interact)(struct node *, struct presentation_node_data *, unsigned int interaction_id);
 } node_presentation_vt[NUM_NODE_TYPES] = {
 	{ node_empty_render, node_empty_inspect, node_empty_interact }, /* node_empty */
 	{ computer_render,   computer_inspect,   computer_interact }, /* node_computer */
 };
+
+struct presentation_node_data
+init_presentation_node() {
+	struct presentation_node_data pnd;
+
+	pnd.bound_tmpfile = tmpfile_request();
+	return pnd;
+}
 
 struct ui_board_cell
 node_empty_render(struct node *n) {
@@ -31,8 +39,9 @@ node_empty_inspect(struct node *n) {
 }
 
 void
-node_empty_interact(struct node *n, unsigned int interaction_id) {
+node_empty_interact(struct node *n, struct presentation_node_data *pn, unsigned int interaction_id) {
 	(void)n;
+	(void)pn;
 	(void)interaction_id;
 }
 
@@ -47,7 +56,7 @@ node_inspect(struct node *n) {
 }
 
 void
-node_interact(struct node *n, unsigned int interaction_id) {
-	node_presentation_vt[n->type].interact(n, interaction_id);
+node_interact(struct node *n, struct presentation_node_data *pn, unsigned int interaction_id) {
+	node_presentation_vt[n->type].interact(n, pn, interaction_id);
 }
 

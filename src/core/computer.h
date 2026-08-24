@@ -28,6 +28,7 @@ uint8_t computer_load_byte(struct computer_data *data, size_t addr);
 uint16_t computer_load_word(struct computer_data *data, size_t addr);
 void computer_store_byte(struct computer_data *data, size_t addr, uint8_t value);
 void computer_store_word(struct computer_data *data, size_t addr, uint16_t value);
+struct assembly_result computer_asm(uint8_t *out_buf, size_t out_size, char *in_str);
 
 #endif
 
