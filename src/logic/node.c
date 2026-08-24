@@ -19,6 +19,7 @@ struct node
 create_empty_node() {
 	struct node n;
 
+	n.type = NODE_EMPTY;
 	n.read_up = n.read_right = n.read_down = n.read_left = NULL;
 	n.write_up = n.write_right = n.write_down = n.write_left = NULL;
 

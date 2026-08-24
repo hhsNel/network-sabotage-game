@@ -127,6 +127,7 @@ create_rl_computer(unsigned int points)
 	n = create_computer();
 	cd = n.data;
 
+	cd->type = COMPUTER_RISC_LABS;
 	cd->data = malloc(sizeof(struct rl_data));
 	if(! cd->data) {
 		fprintf(stderr, "couldn't malloc rl_data\n");
