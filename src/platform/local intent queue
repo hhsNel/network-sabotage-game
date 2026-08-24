@@ -1,0 +1,200 @@
+#ifndef PLATFORM_H
+#define PLATFORM_H
+
+#include <stdbool.h>
+#include <stddef.h>
+
+/*
+ * ============================================================================
+ * Client -> Server commands
+ * ============================================================================
+ */
+
+typedef enum {
+    PLATFORM_COMMAND_NODE_BOUGHT,
+    PLATFORM_COMMAND_NODE_FLASHED,
+    PLATFORM_COMMAND_NODE_RESET
+} PlatformCommandType;
+
+
+/*
+ * Data for a "node bought" command.
+ */
+typedef struct {
+    int x;
+    int y;
+    int node_type;
+} PlatformNodeBought;
+
+
+/*
+ * Data for a "node flashed" command.
+ */
+#define PLATFORM_CODE_MAX_LENGTH 256
+
+typedef struct {
+    int x;
+    int y;
+    char code[PLATFORM_CODE_MAX_LENGTH];
+} PlatformNodeFlashed;
+
+
+/*
+ * Data for a "node reset" command.
+ */
+typedef struct {
+    int x;
+    int y;
+} PlatformNodeReset;
+
+
+/*
+ * A command sent from the client/game toward the server.
+ *
+ * The enum tells us which member of the union is currently valid.
+ */
+typedef struct {
+    PlatformCommandType type;
+
+    union {
+        PlatformNodeBought bought;
+        PlatformNodeFlashed flashed;
+        PlatformNodeReset reset;
+    } data;
+
+} PlatformClientCommand;
+
+
+/*
+ * ============================================================================
+ * Server -> Client commands
+ * ============================================================================
+ *
+ * There are no server -> client commands yet.
+ *
+ * This enum exists so the interface can be extended later without changing
+ * the overall architecture.
+ */
+
+typedef enum {
+    PLATFORM_SERVER_COMMAND_NONE
+} PlatformServerCommandType;
+
+
+typedef struct {
+    PlatformServerCommandType type;
+} PlatformServerCommand;
+
+
+/*
+ * ============================================================================
+ * Queue
+ * ============================================================================
+ */
+
+typedef struct PlatformClientQueueNode PlatformClientQueueNode;
+
+struct PlatformClientQueueNode {
+    PlatformClientCommand command;
+    PlatformClientQueueNode *next;
+};
+
+
+/*
+ * ============================================================================
+ * Platform
+ * ============================================================================
+ *
+ * Currently everything is 100% local.
+ *
+ *     game -> client_to_server -> server logic
+ *
+ * Later the implementation can replace this with actual networking without
+ * changing the game-facing interface.
+ */
+
+typedef struct {
+    PlatformClientQueueNode *client_to_server_head;
+    PlatformClientQueueNode *client_to_server_tail;
+
+    /*
+     * Server -> client is empty for now, but the queue is kept as part of
+     * the platform abstraction for future networking.
+     */
+    PlatformServerCommand *server_to_client;
+    size_t server_to_client_count;
+
+} Platform;
+
+
+/*
+ * ============================================================================
+ * Platform lifecycle
+ * ============================================================================
+ */
+
+void platform_init(Platform *platform);
+
+void platform_destroy(Platform *platform);
+
+
+/*
+ * ============================================================================
+ * Client -> Server
+ * ============================================================================
+ */
+
+/*
+ * Add a command to the client -> server queue.
+ */
+bool platform_send(
+    Platform *platform,
+    PlatformClientCommand command
+);
+
+
+/*
+ * Check whether the client -> server queue contains a command.
+ */
+bool platform_has_client_command(
+    const Platform *platform
+);
+
+
+/*
+ * Remove the next command from the client -> server queue.
+ *
+ * Returns false if the queue is empty.
+ * If successful, the command is written into `command`.
+ */
+bool platform_receive_client_command(
+    Platform *platform,
+    PlatformClientCommand *command
+);
+
+
+/*
+ * ============================================================================
+ * Server -> Client
+ * ============================================================================
+ */
+
+/*
+ * Check whether the server -> client queue contains a command.
+ */
+bool platform_has_server_command(
+    const Platform *platform
+);
+
+
+/*
+ * Remove the next server -> client command.
+ *
+ * Returns false if the queue is empty.
+ */
+bool platform_receive_server_command(
+    Platform *platform,
+    PlatformServerCommand *command
+);
+
+#endif /* PLATFORM_H */
